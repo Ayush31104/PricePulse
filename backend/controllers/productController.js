@@ -96,7 +96,7 @@ export const getTrending = async (req, res, next) => {
       { $project: { _id: 0, query: '$_id', count: 1, avgCheapestPrice: { $round: ['$avgCheapestPrice', 2] } } },
     ]);
 
-    return sendSuccess(res, 200, 'Trending searches', trending);
+    return sendSuccess(res, trending, 'Trending searches', 200);
   } catch (err) {
     next(err);
   }
@@ -154,23 +154,28 @@ export const compareLinkProducts = async (req, res, next) => {
     const maxPrice = Math.max(...prices);
     const avgPrice = +(prices.reduce((s, p) => s + p, 0) / prices.length).toFixed(2);
 
-    return sendSuccess(res, 200, `Comparison results for "${parsed.name}"`, {
-      parsedProduct: {
-        name:        parsed.name,
-        platform:    parsed.platform,
-        originalUrl: parsed.originalUrl,
+    return sendSuccess(
+      res,
+      {
+        parsedProduct: {
+          name:        parsed.name,
+          platform:    parsed.platform,
+          originalUrl: parsed.originalUrl,
+        },
+        products: sorted,
+        meta: {
+          ...meta,
+          total:            sorted.length,
+          extractedQuery:   parsed.name,
+          sourcePlatform:   parsed.platform,
+          cheapestPrice:    minPrice,
+          cheapestPlatform: sorted[0]?.platform,
+          priceRange:       { min: minPrice, max: maxPrice, avg: avgPrice },
+        },
       },
-      products: sorted,
-      meta: {
-        ...meta,
-        total:            sorted.length,
-        extractedQuery:   parsed.name,
-        sourcePlatform:   parsed.platform,
-        cheapestPrice:    minPrice,
-        cheapestPlatform: sorted[0]?.platform,
-        priceRange:       { min: minPrice, max: maxPrice, avg: avgPrice },
-      },
-    });
+      `Comparison results for "${parsed.name}"`,
+      200
+    );
   } catch (err) {
     next(err);
   }

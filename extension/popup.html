@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PricePulse</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <span class="logo">💰 PricePulse</span>
+  </header>
+
+  <main>
+    <!-- Product name row -->
+    <div id="product-bar" class="hidden">
+      <p id="product-name"></p>
+      <button id="btn-refresh" title="Refresh">↻</button>
+    </div>
+
+    <!-- Manual search -->
+    <div id="search-bar">
+      <input id="search-input" type="text" placeholder="Search a product…" />
+      <button id="btn-search">Go</button>
+    </div>
+
+    <!-- States -->
+    <div id="state-spinner" class="hidden">
+      <div class="spinner"></div>
+      <p>Comparing prices…</p>
+    </div>
+
+    <div id="state-error" class="hidden">
+      <p id="error-msg"></p>
+    </div>
+
+    <div id="state-empty" class="hidden">
+      <p>No results found.</p>
+    </div>
+
+    <!-- Results -->
+    <div id="results"></div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

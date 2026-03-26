@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "PricePulse - Price Comparator",
+  "version": "1.0.0",
+  "description": "Compare product prices across Amazon, Flipkart, eBay and more in real-time.",
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PricePulse"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.amazon.com/*",
+        "*://*.amazon.in/*",
+        "*://*.flipkart.com/*",
+        "*://*.ebay.com/*",
+        "*://*.etsy.com/*",
+        "*://*.myntra.com/*",
+        "*://*.snapdeal.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.amazon.com/*",
+    "*://*.amazon.in/*",
+    "*://*.flipkart.com/*",
+    "*://*.ebay.com/*",
+    "*://*.etsy.com/*",
+    "*://*.myntra.com/*",
+    "*://*.snapdeal.com/*",
+    "http://localhost:5000/*"
+  ]
+}

@@ -1,0 +1,178 @@
+/* popup.css */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 360px;
+  min-height: 120px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 10px 14px;
+}
+.logo { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+
+/* ── Main ───────────────────────────────────────────────────────────────── */
+main { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Product bar ────────────────────────────────────────────────────────── */
+#product-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ede9fe;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+#product-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#btn-refresh {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #6366f1;
+  line-height: 1;
+  padding: 0 2px;
+}
+#btn-refresh:hover { color: #4338ca; }
+
+/* ── Search bar ─────────────────────────────────────────────────────────── */
+#search-bar { display: flex; gap: 6px; }
+#search-input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+  background: #fff;
+  transition: border-color .2s;
+}
+#search-input:focus { border-color: #6366f1; }
+#btn-search, #btn-refresh {
+  padding: 7px 14px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background .2s;
+}
+#btn-search:hover { background: #4f46e5; }
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+#state-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+  color: #64748b;
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 3px solid #e0e7ff;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Error / Empty ──────────────────────────────────────────────────────── */
+#state-error, #state-empty {
+  text-align: center;
+  padding: 16px 0;
+  color: #ef4444;
+  font-size: 12px;
+}
+#state-empty { color: #94a3b8; }
+
+/* ── Results ────────────────────────────────────────────────────────────── */
+#results { display: flex; flex-direction: column; gap: 7px; max-height: 380px; overflow-y: auto; }
+
+.card {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: box-shadow .15s;
+}
+.card:hover { box-shadow: 0 2px 8px rgba(99,102,241,.15); }
+.card.cheapest {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.card-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+
+.card-body { flex: 1; min-width: 0; }
+.card-platform {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.card-title {
+  font-size: 12px;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.card-rating { font-size: 11px; color: #f59e0b; margin-top: 2px; }
+
+.card-right { text-align: right; flex-shrink: 0; }
+.card-price {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.card.cheapest .card-price { color: #16a34a; }
+.card-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 600;
+}
+.card-link:hover { text-decoration: underline; }
+
+/* ── Cache notice ───────────────────────────────────────────────────────── */
+.cache-notice {
+  text-align: center;
+  font-size: 10px;
+  color: #94a3b8;
+  padding-bottom: 4px;
+}
+
+/* ── Utility ────────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
