@@ -54,38 +54,34 @@ const flipkartService = {
     cards.each((_, el) => {
       if (results.length >= 5) return false;
 
-      // Title — try multiple known class names
-      const title =
-        $(el).find('._4rR01T').text().trim() ||
-        $(el).find('.s1Q9rs').text().trim()  ||
-        $(el).find('.IRpwTa').text().trim()  ||
-        $(el).find('a[title]').attr('title') ||
-        '';
+      // Title — updated selector
+      const title = $(el).find('.RG5Slk').text().trim();
       if (!title) return;
 
-      // Price
-      const priceRaw =
-        $(el).find('._30jeq3').text() ||
-        $(el).find('._1_WHN1').text() ||
-        '';
+      // Price — updated selector
+      const priceRaw = $(el).find('.hZ3P6w.DeU9vF').text();
       const price = parseInrPrice(priceRaw);
       if (!price) return;
 
-      // Link
-      const href = $(el).find('a._1fQZEK, a.s1Q9rs, a._2rpwqI, a[href*="/p/"]').attr('href') || '';
-      const url  = href ? `https://www.flipkart.com${href.split('?')[0]}` : '';
+      // Link — updated selector
+      const href = $(el).find('a.k7wcnx').attr('href') || '';
+      const url = href ? `https://www.flipkart.com${href.split('?')[0]}` : '';
 
-      const image = $(el).find('img._396cs4, img._2r_T1I').attr('src') || '';
+      // Image — updated selector
+      const image = $(el).find('img.UCc1lI').attr('src') || '';
 
-      const ratingRaw = $(el).find('._3LWZlK').first().text().trim();
-      const rating    = parseFloat(ratingRaw) || 0;
+      // Rating — updated selector
+      const ratingRaw = $(el).find('.CjyrHS .MKiFS6').first().text().trim();
+      const rating = parseFloat(ratingRaw) || 0;
 
-      const reviewsRaw = $(el).find('._2_R_DZ span').first().text().replace(/[^0-9]/g, '');
-      const reviews    = parseInt(reviewsRaw, 10) || 0;
+      // Reviews — updated selector
+      const reviewsText = $(el).find('.PvbNMB').text().trim();
+      const reviewsMatch = reviewsText.match(/(\d+)\s*Ratings/);
+      const reviews = reviewsMatch ? parseInt(reviewsMatch[1], 10) : 0;
 
       results.push({
-        id:       `flipkart-${results.length}`,
-        name:     title,
+        id: `flipkart-${results.length}`,
+        name: title,
         price,
         currency: 'INR',
         platform: 'Flipkart',

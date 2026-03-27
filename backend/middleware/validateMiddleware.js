@@ -14,10 +14,6 @@ export const validateSearch = (req, res, next) => {
   if (q.trim().length < 2) {
     return next(badRequest('Search query must be at least 2 characters'));
   }
-  if (q.trim().length > 100) {
-    return next(badRequest('Search query must not exceed 100 characters'));
-  }
-
   // Sanitize: strip leading/trailing whitespace and normalise to lowercase
   req.query.q = q.trim();
   next();
