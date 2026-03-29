@@ -18,13 +18,15 @@ const PORT = process.env.PORT || 5000;
 
 // async start() lets us await the DB connection before opening the HTTP port.
 // If we started the server before the DB was ready, requests would fail.
+let server;
+
 const start = async () => {
   try {
     // Step 1 — Connect to MongoDB. Throws if the connection fails.
     await connectDB();
 
     // Step 2 — Begin accepting HTTP requests only after DB is ready
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`🚀 Backend server running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
     });
@@ -35,5 +37,12 @@ const start = async () => {
     process.exit(1);
   }
 };
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
+});
 
 start();

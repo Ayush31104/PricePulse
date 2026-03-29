@@ -197,3 +197,23 @@ main { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 
 /* ── Utility ────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
+
+/* ── Price History ─────────────────────────────────────────────────────────── */
+#price-history {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+#price-history h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+#price-stats {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}

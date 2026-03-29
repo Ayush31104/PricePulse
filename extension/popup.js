@@ -18,6 +18,9 @@
 //     → background.js returns { products, meta, fromCache }
 //     → popup.js renders the result cards
 
+import { trackProductPrice, generateProductId } from './services/priceTracker.js';
+import priceHistoryStorage from './services/priceHistoryStorage.js';
+
 // Shorthand helper — gets a DOM element by its id attribute
 const $ = (id) => document.getElementById(id);
 
@@ -33,18 +36,24 @@ const ui = {
   errorMsg:    $('error-msg'),     // the actual error text
   empty:       $('state-empty'),   // "No results found" message
   results:     $('results'),       // the container where product cards are injected
+  priceHistory: $('price-history'),
+  priceChart: $('price-chart'),
+  priceStats: $('price-stats'),
 };
 
 // Tracks the last searched query so the refresh button knows what to re-search
 let currentQuery = '';
+let currentProductId = null;
+let chart = null;
 
 // ── Boot sequence ─────────────────────────────────────────────────────────────
 // Runs immediately when the popup opens (IIFE = Immediately Invoked Function Expression)
 (async () => {
   // Try to extract the product title from the currently active browser tab
-  const title = await getPageTitle();
+  const { title, url } = await getPageInfo();
   if (title) {
     currentQuery = title;
+    currentProductId = generateProductId(url, title);
     ui.productName.textContent = title; // show it in the purple product bar
     ui.searchInput.value = title;       // pre-fill the search input
     show(ui.productBar);
@@ -76,19 +85,19 @@ ui.btnRefresh.addEventListener('click', () => {
   }
 });
 
-// ── getPageTitle ──────────────────────────────────────────────────────────────
+// ── Core ──────────────────────────────────────────────────────────────────────
 /**
  * Injects a small function into the active browser tab to read the
  * product title from the page's DOM. This is more reliable than
  * messaging content.js because it runs synchronously in the tab context.
  *
- * @returns {string|null} — product title or null if not found / not a product page
+ * @returns {{title: string|null, url: string}} — product title and URL
  */
-async function getPageTitle() {
+async function getPageInfo() {
   try {
     // Get the currently active tab in the current window
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return null;
+    if (!tab?.id) return { title: null, url: null };
 
     // executeScript injects the function into the tab and returns its return value
     const [{ result }] = await chrome.scripting.executeScript({
@@ -110,10 +119,10 @@ async function getPageTitle() {
         return null;
       },
     });
-    return result || null;
+    return { title: result || null, url: tab.url };
   } catch {
     // executeScript fails on chrome:// pages, PDFs, etc. — silently return null
-    return null;
+    return { title: null, url: null };
   }
 }
 
@@ -198,6 +207,12 @@ function render({ products, meta, fromCache }) {
           </div>
         </div>`;
     }).join('');
+
+  // Track price and show history
+  if (currentProductId && currentQuery) {
+    trackProductPrice({ productId: currentProductId, title: currentQuery, currentPrice: minPrice });
+    showPriceHistory(currentProductId, currentQuery);
+  }
 }
 
 // ── setState ──────────────────────────────────────────────────────────────────
@@ -213,6 +228,7 @@ function setState(state, msg = '') {
   hide(ui.spinner);
   hide(ui.error);
   hide(ui.empty);
+  hide(ui.priceHistory);
 
   // Clear results unless we're about to render new ones
   if (state !== 'results') ui.results.innerHTML = '';
@@ -254,4 +270,53 @@ function formatInr(price) {
     currency:              'INR',
     maximumFractionDigits: 0, // no decimal places for rupees
   }).format(price);
+}
+
+async function showPriceHistory(productId, title) {
+  try {
+    const history = await priceHistoryStorage.getProductHistory(productId);
+    if (!history || history.prices.length < 2) return; // Need at least 2 points for chart
+
+    show(ui.priceHistory);
+
+    // Destroy previous chart
+    if (chart) chart.destroy();
+
+    const ctx = ui.priceChart.getContext('2d');
+    const labels = history.prices.map(p => new Date(p.timestamp).toLocaleDateString());
+    const data = history.prices.map(p => p.price);
+
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Price (INR)',
+          data,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
+      }
+    });
+
+    // Show stats
+    const prices = history.prices.map(p => p.price);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    ui.priceStats.innerHTML = `
+      <p><strong>Lowest:</strong> ${formatInr(minPrice)}</p>
+      <p><strong>Highest:</strong> ${formatInr(maxPrice)}</p>
+    `;
+  } catch (error) {
+    console.error('Failed to show price history:', error);
+  }
 }
