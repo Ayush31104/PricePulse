@@ -19,6 +19,18 @@ interface PriceHistoryChartProps {
   history: ProductHistory | null;
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length > 0) {
+    return (
+      <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
+        <p className="text-sm font-semibold text-gray-800">{payload[0].payload.fullTime}</p>
+        <p className="text-sm text-indigo-600 font-semibold">{formatCurrency(payload[0].value)}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({ history }) => {
   if (!history || history.prices.length === 0) {
     return <div className="text-gray-500 text-center py-4">No price history available</div>;
@@ -49,15 +61,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({ history }) => {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" />
           <YAxis />
-          <Tooltip
-            labelFormatter={(label, payload) => {
-              if (payload && payload[0]) {
-                return payload[0].payload.fullTime;
-              }
-              return label;
-            }}
-            formatter={(value: number) => [formatCurrency(value), 'Price']}
-          />
+          <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
           <Line
             type="monotone"
             dataKey="price"
