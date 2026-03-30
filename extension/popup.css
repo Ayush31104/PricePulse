@@ -15,7 +15,21 @@ header {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   padding: 10px 14px;
 }
-.logo { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+.logo {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.logo-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 10px;
+  object-fit: contain;
+}
 
 /* ── Main ───────────────────────────────────────────────────────────────── */
 main { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
