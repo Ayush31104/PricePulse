@@ -14,10 +14,10 @@ import {
 // ── Platform detection (mirrors backend urlParser.js logic) ──────────────────
 // Done client-side so we can show instant visual feedback before the API call.
 const PLATFORM_PATTERNS = [
-  { name: "Amazon",   pattern: /amazon\./i,   color: "text-orange-600", bg: "bg-orange-50 border-orange-200", dot: "bg-orange-400" },
-  { name: "Flipkart", pattern: /flipkart\./i, color: "text-blue-600",   bg: "bg-blue-50 border-blue-200",     dot: "bg-blue-500"   },
-  { name: "Etsy",     pattern: /etsy\./i,     color: "text-rose-600",   bg: "bg-rose-50 border-rose-200",     dot: "bg-rose-500"   },
-  { name: "eBay",     pattern: /ebay\./i,     color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200", dot: "bg-yellow-500" },
+  { name: "Amazon",   pattern: /amazon\./i,   dot: "bg-orange-400", detected: "text-orange-300 border-orange-400/40 bg-orange-500/10" },
+  { name: "Flipkart", pattern: /flipkart\./i, dot: "bg-blue-400",   detected: "text-blue-300 border-blue-400/40 bg-blue-500/10"     },
+  { name: "Etsy",     pattern: /etsy\./i,     dot: "bg-rose-400",   detected: "text-rose-300 border-rose-400/40 bg-rose-500/10"     },
+  { name: "eBay",     pattern: /ebay\./i,     dot: "bg-yellow-400", detected: "text-yellow-300 border-yellow-400/40 bg-yellow-500/10" },
 ];
 
 const detectPlatformClient = (url) => {
@@ -81,7 +81,7 @@ export default function LinkInput({ onCompare, isLoading }) {
       <form onSubmit={handleSubmit} className="relative">
 
         {/* Link icon */}
-        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none z-10" />
+        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40 pointer-events-none z-10" />
 
         <input
           ref={inputRef}
@@ -89,13 +89,12 @@ export default function LinkInput({ onCompare, isLoading }) {
           value={url}
           onChange={handleChange}
           placeholder="Paste a product link (Amazon, Flipkart, Etsy, eBay)..."
-          className={`w-full pl-12 pr-36 py-4 text-base rounded-2xl border-2 bg-white shadow-sm
-                      focus:outline-none focus:ring-4 transition-all placeholder-gray-400
+          className={`glass-input w-full pl-12 pr-36 py-4 text-base rounded-2xl transition-all
                       ${urlError
-                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                        ? "!border-red-400/60 !shadow-[0_0_0_3px_rgba(248,113,113,0.2)]"
                         : isSupported
-                          ? "border-green-400 focus:border-green-500 focus:ring-green-100"
-                          : "border-gray-200 focus:border-violet-500 focus:ring-violet-100"
+                          ? "!border-green-400/60 !shadow-[0_0_0_3px_rgba(74,222,128,0.15)]"
+                          : ""
                       }`}
         />
 
@@ -104,7 +103,7 @@ export default function LinkInput({ onCompare, isLoading }) {
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-32 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
+            className="absolute right-32 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors z-10"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -114,10 +113,8 @@ export default function LinkInput({ onCompare, isLoading }) {
         <button
           type="submit"
           disabled={isLoading || !url.trim()}
-          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5
-                     bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300
-                     text-white px-4 py-2.5 rounded-xl text-sm font-semibold
-                     transition-colors shadow-sm"
+          className="btn-gradient absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5
+                     text-white px-4 py-2.5 rounded-xl text-sm font-semibold"
         >
           {isLoading ? (
             <>
@@ -133,41 +130,38 @@ export default function LinkInput({ onCompare, isLoading }) {
         </button>
       </form>
 
-      {/* ── Status row below the input ─────────────────────────────────────── */}
+      {/* ── Status row ────────────────────────────────────────────────────── */}
       <div className="mt-2.5 min-h-[24px] px-1">
-        {/* Validation error */}
         {urlError && (
-          <div className="flex items-center gap-1.5 text-xs text-red-600">
+          <div className="flex items-center gap-1.5 text-xs text-red-400">
             <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
             {urlError}
           </div>
         )}
-
-        {/* Platform detected — green confirmation */}
         {!urlError && isSupported && (
-          <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full border ${detectedPlatform.bg}`}>
+          <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full border ${detectedPlatform.detected}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${detectedPlatform.dot}`} />
-            <span className={detectedPlatform.color}>{detectedPlatform.name} link detected</span>
-            <CheckCircleIcon className={`h-3.5 w-3.5 ${detectedPlatform.color}`} />
+            {detectedPlatform.name} link detected
+            <CheckCircleIcon className="h-3.5 w-3.5" />
           </div>
         )}
-
-        {/* URL typed but platform not recognised */}
         {!urlError && url.trim().length > 10 && urlIsValid && !isSupported && (
-          <div className="flex items-center gap-1.5 text-xs text-amber-600">
+          <div className="flex items-center gap-1.5 text-xs text-amber-400">
             <ExclamationCircleIcon className="h-4 w-4 shrink-0" />
             Supported platforms: Amazon · Flipkart · Etsy · eBay
           </div>
         )}
       </div>
 
-      {/* ── Supported platform chips ───────────────────────────────────────── */}
+      {/* ── Platform chips ────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 mt-3 justify-center">
         {PLATFORM_PATTERNS.map((p) => (
           <span
             key={p.name}
-            className={`text-xs px-3 py-1.5 rounded-full border font-medium ${p.bg} ${p.color}`}
+            className="text-xs glass text-white/70 px-3 py-1.5 rounded-full font-medium
+                       hover:text-white hover:bg-white/15 transition-all cursor-default"
           >
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${p.dot} mr-1.5 align-middle`} />
             {p.name}
           </span>
         ))}

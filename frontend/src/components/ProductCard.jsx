@@ -13,108 +13,96 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { StarIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
 
-// Each platform gets its own colour scheme for visual distinction
 const PLATFORM_STYLES = {
-  Amazon:   { bg: 'bg-orange-50',  border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700',  dot: 'bg-orange-400' },
-  Flipkart: { bg: 'bg-blue-50',    border: 'border-blue-200',   badge: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500'   },
-  eBay:     { bg: 'bg-yellow-50',  border: 'border-yellow-200', badge: 'bg-yellow-100 text-yellow-700',  dot: 'bg-yellow-500' },
-  Etsy:     { bg: 'bg-rose-50',    border: 'border-rose-200',   badge: 'bg-rose-100 text-rose-700',      dot: 'bg-rose-500'   },
+  Amazon:   { badge: 'bg-orange-500/20 text-orange-300 border-orange-400/30', dot: 'bg-orange-400' },
+  Flipkart: { badge: 'bg-blue-500/20   text-blue-300   border-blue-400/30',   dot: 'bg-blue-400'   },
+  eBay:     { badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30', dot: 'bg-yellow-400' },
+  Etsy:     { badge: 'bg-rose-500/20   text-rose-300   border-rose-400/30',   dot: 'bg-rose-400'   },
 };
 
-// Renders a row of 5 stars, filled up to the rounded rating value
 function StarRating({ rating }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
         i <= Math.round(rating)
           ? <StarIcon    key={i} className="h-3.5 w-3.5 text-amber-400" />
-          : <StarOutline key={i} className="h-3.5 w-3.5 text-gray-300" />
+          : <StarOutline key={i} className="h-3.5 w-3.5 text-white/20" />
       ))}
     </div>
   );
 }
 
 export default function ProductCard({ product, isCheapest: isCheapestProp }) {
-  // Fall back to Amazon styles if the platform isn't in our map
   const style = PLATFORM_STYLES[product.platform] || PLATFORM_STYLES.Amazon;
 
-  // Support both backend field names and legacy mock data field names
   const title      = product.name       || product.title || 'Unknown Product';
   const productUrl = product.productUrl || product.url   || '#';
   const reviews    = product.reviews    || 0;
-
-  // The cheapest flag can come from the backend OR be calculated by ProductList
   const isCheapest = product.isCheapest || isCheapestProp;
 
   return (
-    <div
-      className={`relative flex flex-col rounded-2xl border-2 overflow-hidden shadow-sm
-                  hover:shadow-lg hover:-translate-y-1 transition-all duration-200 bg-white
-                  ${isCheapest ? 'border-green-400 ring-2 ring-green-200' : style.border}`}
-    >
-      {/* Green "Best Price" ribbon — only shown on the cheapest card */}
+    <div className={`product-card relative flex flex-col rounded-2xl overflow-hidden
+                     ${isCheapest ? 'ring-2 ring-green-400/60 shadow-green-500/20' : ''}`}>
+
+      {/* Best Price ribbon */}
       {isCheapest && (
         <div className="absolute top-3 left-3 z-10 bg-green-500 text-white text-xs font-bold
-                        px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                        px-2.5 py-1 rounded-full shadow-lg shadow-green-500/40 flex items-center gap-1">
           🏆 Best Price
         </div>
       )}
 
-      {/* Platform badge (top-right corner) */}
+      {/* Platform badge */}
       <div className={`absolute top-3 right-3 z-10 flex items-center gap-1.5 text-xs font-semibold
-                       px-2.5 py-1 rounded-full ${style.badge}`}>
+                       px-2.5 py-1 rounded-full border ${style.badge}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
         {product.platform}
       </div>
 
-      {/* Product image — falls back to a placeholder if the URL is missing */}
-      <div className={`${style.bg} h-48 flex items-center justify-center overflow-hidden`}>
+      {/* Image */}
+      <div className="h-48 overflow-hidden bg-white/5">
         <img
-          src={product.image || `https://placehold.co/400x300/e2e8f0/94a3b8?text=${encodeURIComponent(product.platform)}`}
+          src={product.image || `https://placehold.co/400x300/1e1b4b/94a3b8?text=${encodeURIComponent(product.platform)}`}
           alt={title}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
           onError={(e) => {
-            // If the image fails to load, swap in the placeholder
-            e.target.src = `https://placehold.co/400x300/e2e8f0/94a3b8?text=${encodeURIComponent(product.platform)}`;
+            e.target.src = `https://placehold.co/400x300/1e1b4b/94a3b8?text=${encodeURIComponent(product.platform)}`;
           }}
         />
       </div>
 
-      {/* Card body — title, rating, price, CTA button */}
+      {/* Card body */}
       <div className="flex flex-col flex-1 p-4 gap-3">
-        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+        <h3 className="text-sm font-semibold text-white/90 line-clamp-2 leading-snug tracking-tight">
           {title}
         </h3>
 
-        {/* Star rating row */}
         <div className="flex items-center gap-2">
           <StarRating rating={product.rating} />
-          <span className="text-xs text-gray-500 font-medium">{product.rating}</span>
-          <span className="text-xs text-gray-400">({reviews.toLocaleString()})</span>
+          <span className="text-xs text-white/50 font-medium">{product.rating}</span>
+          <span className="text-xs text-white/30">({reviews.toLocaleString()})</span>
         </div>
 
-        {/* Price and "View Deal" button */}
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/10">
           <div>
-            {/* formatCurrency formats the number as ₹68,999 using Indian locale */}
-            <span className="text-2xl font-bold text-gray-900">
+            <span className={`text-2xl font-black tracking-tight
+                              ${isCheapest ? 'text-green-400' : 'text-white'}`}>
               {formatCurrency(product.price)}
             </span>
             {isCheapest && (
-              <p className="text-xs text-green-600 font-medium mt-0.5">Lowest price!</p>
+              <p className="text-xs text-green-400/80 font-medium mt-0.5">Lowest price!</p>
             )}
           </div>
 
-          {/* External link to the product page on the original platform */}
           <a
             href={productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl
-                        transition-colors shadow-sm
+            className={`view-deal-btn flex items-center gap-1.5 text-xs font-semibold
+                        px-4 py-2 rounded-xl text-white
                         ${isCheapest
-                          ? 'bg-green-500 hover:bg-green-600 text-white'
-                          : 'bg-gray-900 hover:bg-gray-700 text-white'}`}
+                          ? 'bg-green-500 hover:bg-green-400 shadow-lg shadow-green-500/30'
+                          : 'btn-gradient'}`}
           >
             View Deal
             <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />

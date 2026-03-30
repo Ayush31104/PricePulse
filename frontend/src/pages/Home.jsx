@@ -120,27 +120,46 @@ export default function Home() {
     : products.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen page-dark">
 
       {/* ── Hero / Input Section ───────────────────────────────────────────── */}
-      <section className="bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
+      <section className="hero-bg relative overflow-hidden py-24 px-4">
 
-          <div className="inline-flex items-center gap-2 bg-blue-500/20 border border-blue-400/30
-                          text-blue-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
-            🔍 Compare prices across Amazon, Flipkart, eBay &amp; Etsy
+        {/* Floating blurred shapes */}
+        <div className="float-1 pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full
+                        bg-purple-600/25 blur-3xl" />
+        <div className="float-2 pointer-events-none absolute top-10 right-0 w-96 h-96 rounded-full
+                        bg-blue-500/20 blur-3xl" />
+        <div className="float-3 pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-72 h-72
+                        rounded-full bg-pink-500/15 blur-3xl" />
+
+        <div className="relative max-w-3xl mx-auto text-center">
+
+          {/* Badge */}
+          <div className="fade-in-up-1 inline-flex items-center gap-2 glass text-purple-200
+                          text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide">
+            ✦ Compare prices across Amazon, Flipkart, eBay &amp; Etsy
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 leading-tight">
-            Find the <span className="text-blue-400">Best Price</span><br />
-            in Seconds
+          {/* Heading */}
+          <h1 className="fade-in-up-2 text-5xl sm:text-6xl font-black text-white mb-5
+                         leading-[1.1] tracking-tight">
+            Find the{" "}
+            <span className="bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400
+                             bg-clip-text text-transparent">
+              Best Price
+            </span>
+            <br />in Seconds
           </h1>
-          <p className="text-blue-200 text-base sm:text-lg mb-8 max-w-xl mx-auto">
-            Search by product name or paste a link — we'll compare prices everywhere.
+
+          {/* Subtitle */}
+          <p className="fade-in-up-3 text-white/60 text-base sm:text-lg mb-10 max-w-xl mx-auto
+                        leading-relaxed tracking-wide">
+            Search by product name or paste a link we'll compare prices everywhere.
           </p>
 
-          {/* ── Mode toggle ─────────────────────────────────────────────────── */}
-          <div className="inline-flex bg-white/10 rounded-2xl p-1 mb-8 gap-1">
+          {/* Mode toggle */}
+          <div className="fade-in-up-3 inline-flex glass rounded-2xl p-1 mb-8 gap-1">
             {MODES.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -148,8 +167,8 @@ export default function Home() {
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
                             transition-all duration-200
                             ${mode === id
-                              ? "bg-white text-gray-900 shadow"
-                              : "text-blue-200 hover:text-white hover:bg-white/10"}`}
+                              ? "bg-white text-gray-900 shadow-lg"
+                              : "text-white/60 hover:text-white hover:bg-white/10"}`}
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -157,17 +176,19 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ── Active input ─────────────────────────────────────────────────── */}
-          {mode === "name" ? (
-            <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-          ) : (
-            <LinkInput onCompare={handleCompareLink} isLoading={isLoading} />
-          )}
+          {/* Active input */}
+          <div className="fade-in-up-4">
+            {mode === "name" ? (
+              <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+            ) : (
+              <LinkInput onCompare={handleCompareLink} isLoading={isLoading} />
+            )}
+          </div>
         </div>
       </section>
 
       {/* ── Results Section ────────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <section className="results-section max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
         {/* Backend status — only before first search */}
         {!hasSearched && <BackendStatus />}
@@ -179,9 +200,9 @@ export default function Home() {
         {!isLoading && error && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <ExclamationTriangleIcon className="h-14 w-14 text-red-400 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Something went wrong</h3>
-            <p className="text-gray-500 max-w-sm mb-4">{error}</p>
-            <p className="text-xs text-gray-400 bg-gray-100 rounded-lg px-4 py-2">
+            <h3 className="text-xl font-bold text-white/80 mb-2">Something went wrong</h3>
+            <p className="text-white/50 max-w-sm mb-4">{error}</p>
+            <p className="text-xs text-white/30 glass rounded-lg px-4 py-2">
               Make sure the backend is running:{" "}
               <code className="font-mono">npm run dev:server</code>
             </p>
@@ -191,9 +212,9 @@ export default function Home() {
         {/* Empty state */}
         {!isLoading && !error && hasSearched && products.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <FaceFrownIcon className="h-14 w-14 text-gray-300 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">No products found</h3>
-            <p className="text-gray-500 max-w-sm">
+            <FaceFrownIcon className="h-14 w-14 text-white/20 mb-4" />
+            <h3 className="text-xl font-bold text-white/80 mb-2">No products found</h3>
+            <p className="text-white/40 max-w-sm">
               {mode === "link"
                 ? "Couldn't find comparison results for this link. Try searching by product name instead."
                 : `We couldn't find anything for "${query}". Try "iPhone", "MacBook", or "Nike".`}
@@ -236,8 +257,8 @@ export default function Home() {
 
             {filteredCount === 0 ? (
               <div className="text-center py-16 text-gray-500">
-                <p className="text-lg font-medium">No results for selected platforms.</p>
-                <p className="text-sm mt-1">Try enabling more platforms above.</p>
+                <p className="text-lg font-medium text-white/50">No results for selected platforms.</p>
+                <p className="text-sm mt-1 text-white/30">Try enabling more platforms above.</p>
               </div>
             ) : (
               <ProductList
@@ -267,10 +288,10 @@ function InitialState({ mode }) {
           : <MagnifyingGlassIcon className="h-12 w-12 text-blue-400" />
         }
       </div>
-      <h3 className="text-xl font-bold text-gray-800 mb-2">
+      <h3 className="text-xl font-bold text-white mb-2">
         {mode === "link" ? "Paste a product link" : "Start comparing prices"}
       </h3>
-      <p className="text-gray-500 max-w-sm text-sm">
+      <p className="text-white/50 max-w-sm text-sm">
         {mode === "link"
           ? "Copy any product URL from Amazon, Flipkart, Etsy, or eBay and paste it above."
           : "Type a product name above or click one of the quick suggestions."}
@@ -288,15 +309,16 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="bg-white border-t border-gray-100 py-16 px-4">
+    <section id="how-it-works" className="border-t border-white/5 py-16 px-4"
+             style={{background:'rgba(255,255,255,0.02)'}}>
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-10">How It Works</h2>
+        <h2 className="text-2xl font-black text-center text-white/90 mb-10 tracking-tight">How It Works</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((s, i) => (
-            <div key={i} className="text-center p-6 rounded-2xl bg-gray-50 border border-gray-100">
+            <div key={i} className="text-center p-6 rounded-2xl glass border-white/10">
               <div className="text-4xl mb-3">{s.icon}</div>
-              <h3 className="font-bold text-gray-800 mb-1">{s.title}</h3>
-              <p className="text-sm text-gray-500">{s.desc}</p>
+              <h3 className="font-bold text-white/90 mb-1">{s.title}</h3>
+              <p className="text-sm text-white/50">{s.desc}</p>
             </div>
           ))}
         </div>

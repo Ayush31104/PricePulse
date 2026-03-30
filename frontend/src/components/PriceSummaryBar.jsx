@@ -16,51 +16,50 @@
 
 import { formatCurrency } from '../utils/formatCurrency';
 
+const STAT_ICONS = {
+  lowest:  '🏷️',
+  highest: '📈',
+  average: '📊',
+  savings: '💰',
+};
+
 export default function PriceSummaryBar({ products, query, meta = {} }) {
-  // Don't render anything if there are no products to summarise
   if (!products.length) return null;
 
-  // Prefer backend-calculated values from meta when available.
-  // Fall back to calculating from the current products array.
   const prices = products.map((p) => p.price);
   const min    = meta.priceRange?.min ?? Math.min(...prices);
   const max    = meta.priceRange?.max ?? Math.max(...prices);
   const avg    = meta.priceRange?.avg ?? prices.reduce((a, b) => a + b, 0) / prices.length;
-  const saving = max - min; // how much you save by choosing cheapest over most expensive
-
-  // Which platform has the cheapest price
-  const cheapestPlatform = meta.cheapestPlatform
-    ?? products.find((p) => p.price === min)?.platform;
+  const saving = max - min;
+  const cheapestPlatform = meta.cheapestPlatform ?? products.find((p) => p.price === min)?.platform;
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg">
-      <p className="text-sm font-medium text-blue-100 mb-3">
+    <div className="stats-bar rounded-2xl p-5 text-white shadow-xl">
+      <p className="text-sm font-medium text-white/60 mb-4 tracking-wide">
         Price comparison for{' '}
         <span className="font-bold text-white">"{query}"</span>{' '}
-        across {meta.total ?? products.length} listings
+        — {meta.total ?? products.length} listings found
       </p>
-
-      {/* Four stat boxes in a responsive grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {/* highlight=true gives the cheapest box a slightly brighter background */}
-        <Stat label="Lowest Price"  value={formatCurrency(min)}    sub={cheapestPlatform} highlight />
-        <Stat label="Highest Price" value={formatCurrency(max)} />
-        <Stat label="Average Price" value={formatCurrency(avg)} />
-        <Stat label="Max Savings"   value={formatCurrency(saving)}  sub="vs most expensive" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat icon={STAT_ICONS.lowest}  label="Lowest Price"  value={formatCurrency(min)} sub={cheapestPlatform} highlight />
+        <Stat icon={STAT_ICONS.highest} label="Highest Price" value={formatCurrency(max)} />
+        <Stat icon={STAT_ICONS.average} label="Average Price" value={formatCurrency(avg)} />
+        <Stat icon={STAT_ICONS.savings} label="Max Savings"   value={formatCurrency(saving)} sub="vs most expensive" />
       </div>
     </div>
   );
 }
 
-// ── Stat sub-component ────────────────────────────────────────────────────────
-// Renders a single statistic box inside the summary bar.
-// Props: label, value, sub (optional subtitle), highlight (boolean)
-function Stat({ label, value, sub, highlight }) {
+function Stat({ icon, label, value, sub, highlight }) {
   return (
-    <div className={`rounded-xl p-3 ${highlight ? 'bg-white/20 ring-1 ring-white/30' : 'bg-white/10'}`}>
-      <p className="text-xs text-blue-200 font-medium">{label}</p>
-      <p className={`text-xl font-bold mt-0.5 ${highlight ? 'text-white' : 'text-blue-50'}`}>{value}</p>
-      {sub && <p className="text-xs text-blue-300 mt-0.5">{sub}</p>}
+    <div className={`stat-card rounded-xl p-3.5 flex flex-col gap-1 cursor-default
+                     ${highlight ? 'ring-1 ring-green-400/40 bg-green-500/10' : ''}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="text-base">{icon}</span>
+        <p className="text-xs text-white/50 font-medium tracking-wide">{label}</p>
+      </div>
+      <p className={`text-xl font-black tracking-tight ${highlight ? 'text-green-300' : 'text-white'}`}>{value}</p>
+      {sub && <p className="text-xs text-white/40 mt-0.5">{sub}</p>}
     </div>
   );
 }

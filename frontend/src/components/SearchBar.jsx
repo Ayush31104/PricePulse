@@ -40,23 +40,21 @@ export default function SearchBar({ onSearch, isLoading }) {
     <div className="w-full max-w-2xl mx-auto">
       {/* Search input */}
       <form onSubmit={handleSubmit} className="relative">
-        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search for a product (e.g. iPhone 13)..."
-          className="w-full pl-12 pr-28 py-4 text-base rounded-2xl border-2 border-gray-200 bg-white shadow-sm
-                     focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100
-                     transition-all placeholder-gray-400"
+          className="glass-input w-full pl-12 pr-32 py-4 text-base rounded-2xl"
         />
         {/* Clear button */}
         {value && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-24 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-28 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -65,22 +63,20 @@ export default function SearchBar({ onSearch, isLoading }) {
         <button
           type="submit"
           disabled={isLoading || !value.trim()}
-          className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700
-                     disabled:bg-blue-300 text-white px-5 py-2.5 rounded-xl text-sm font-semibold
-                     transition-colors shadow-sm"
+          className="btn-gradient absolute right-2 top-1/2 -translate-y-1/2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold"
         >
           {isLoading ? "..." : "Search"}
         </button>
       </form>
 
       {/* Quick suggestion chips */}
-      <div className="flex flex-wrap gap-2 mt-3 justify-center">
+      <div className="flex flex-wrap gap-2 mt-4 justify-center">
         {SUGGESTIONS.map((s) => (
           <button
             key={s}
             onClick={() => handleSuggestion(s)}
-            className="text-xs bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full
-                       hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+            className="text-xs glass text-white/70 px-3 py-1.5 rounded-full
+                       hover:text-white hover:bg-white/15 transition-all"
           >
             {s}
           </button>
