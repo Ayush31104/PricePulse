@@ -14,6 +14,7 @@ import app from './app.js';
 import connectDB from './config/db.js';
 
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || '*';
 
 // Only start the HTTP server when running locally (not on Vercel).
 // Vercel imports api/index.js directly and handles the HTTP layer itself.
