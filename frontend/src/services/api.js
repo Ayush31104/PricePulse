@@ -82,10 +82,12 @@ export const userService = {
   updateProfile: (data) => api.put('/users/profile', data),
 };
 
-// ── History endpoints (requires auth) ────────────────────────────────────────
+// History endpoints (requires auth)
 export const historyService = {
-  getHistory:   () => api.get('/history'),
+  // limit defaults to 20; pass 10 for the dashboard view
+  getHistory:   (limit = 20) => api.get('/history', { params: { limit } }),
   clearHistory: () => api.delete('/history'),
+  saveSearch:   (data) => api.post('/history', data),
 };
 
 // ── Health check ──────────────────────────────────────────────────────────────

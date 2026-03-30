@@ -1,11 +1,15 @@
 // components/Navbar.jsx
-import { Link } from "react-router-dom";
-import { ShoppingCartIcon } from "@heroicons/react/24/outline";
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCartIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const handleLogoClick = (event) => {
     event.preventDefault();
-    window.location.href = "/";
+    window.location.href = '/';
   };
 
   return (
@@ -13,11 +17,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a
-            href="/"
-            onClick={handleLogoClick}
-            className="flex items-center gap-2 group"
-          >
+          <a href="/" onClick={handleLogoClick} className="flex items-center gap-2 group">
             <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-xl shadow group-hover:shadow-md transition-shadow">
               <ShoppingCartIcon className="h-5 w-5 text-white" />
             </div>
@@ -33,6 +33,28 @@ export default function Navbar() {
             <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-100">
               Free to Use
             </span>
+
+            {user ? (
+              <>
+                <Link to="/dashboard" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+                  <UserCircleIcon className="h-5 w-5" />
+                  {user.name?.split(' ')[0]}
+                </Link>
+                <button
+                  onClick={() => { logout(); navigate('/'); }}
+                  className="text-red-500 hover:text-red-600 transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login"    className="hover:text-blue-600 transition-colors">Login</Link>
+                <Link to="/register" className="bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

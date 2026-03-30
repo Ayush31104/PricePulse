@@ -1,5 +1,5 @@
-// pages/Home.jsx
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import LinkInput from "../components/LinkInput";
 import FilterBar from "../components/FilterBar";
@@ -9,7 +9,8 @@ import ParsedProductCard from "../components/ParsedProductCard";
 import Loader from "../components/Loader";
 import BackendStatus from "../components/BackendStatus";
 import { fetchProducts } from "../services/searchService";
-import { productService } from "../services/api";
+import { productService, historyService } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import {
   MagnifyingGlassIcon,
   LinkIcon,
@@ -28,6 +29,14 @@ const MODES = [
 export default function Home() {
   // ── Mode ──────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState("name"); // "name" | "link"
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  // Auto-trigger search when arriving from dashboard re-search link (/?q=...)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) handleSearch(q);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Shared results state ──────────────────────────────────────────────────
   const [products, setProducts]               = useState([]);
@@ -60,7 +69,17 @@ export default function Home() {
     setMeta(responseMeta);
     setError(err);
     setIsLoading(false);
-  }, []);
+
+    // Save search to history if user is logged in
+    if (user && !err && data.length > 0) {
+      historyService.saveSearch({
+        query: searchQuery,
+        resultsCount:     data.length,
+        cheapestPrice:    responseMeta?.cheapestPrice    ?? null,
+        cheapestPlatform: responseMeta?.cheapestPlatform ?? null,
+      }).catch(() => {}); // fire-and-forget, don't block UI
+    }
+  }, [user]);
 
   // ── Handler: compare by pasted URL ───────────────────────────────────────
   const handleCompareLink = useCallback(async (url) => {

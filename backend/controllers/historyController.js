@@ -7,6 +7,33 @@
 
 import SearchHistory from '../models/SearchHistory.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
+import { badRequest } from '../utils/ApiError.js';
+
+/**
+ * POST /api/history
+ * Saves a search query for the logged-in user.
+ * Called automatically by the frontend after every search.
+ *
+ * Request body: { query, resultsCount, cheapestPrice, cheapestPlatform }
+ */
+export const saveSearch = async (req, res, next) => {
+  try {
+    const { query, resultsCount, cheapestPrice, cheapestPlatform } = req.body;
+    if (!query) return next(badRequest('query is required'));
+
+    const entry = await SearchHistory.create({
+      userId: req.user._id,
+      query,
+      resultsCount:    resultsCount    ?? 0,
+      cheapestPrice:   cheapestPrice   ?? null,
+      cheapestPlatform: cheapestPlatform ?? null,
+    });
+
+    return sendSuccess(res, entry, 'Search saved', 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
 /**
  * GET /api/history

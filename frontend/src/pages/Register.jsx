@@ -15,11 +15,12 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await authService.register(form);
-      login(data); // auto-login after register
-      navigate('/profile');
+      // Backend envelope: { success, message, data: { _id, name, email, token, ... } }
+      const res = await authService.register(form);
+      login(res.data?.data ?? res.data); // auto-login after register
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

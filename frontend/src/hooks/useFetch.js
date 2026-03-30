@@ -38,7 +38,9 @@ export function useFetch(fetchFn, deps = []) {
         if (!cancelled) setData(res.data); // only update state if still mounted
       })
       .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || 'Error');
+        // api.js response interceptor converts errors to plain Error objects,
+        // so the message is always in err.message — not err.response
+        if (!cancelled) setError(err.message || 'An unexpected error occurred');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

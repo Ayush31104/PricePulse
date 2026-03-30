@@ -15,11 +15,13 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await authService.login(form);
-      login(data);
-      navigate('/profile');
+      // Backend envelope: { success, message, data: { _id, name, email, token, ... } }
+      // We must unwrap .data.data to get the actual user object with the token
+      const res = await authService.login(form);
+      login(res.data?.data ?? res.data);
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
