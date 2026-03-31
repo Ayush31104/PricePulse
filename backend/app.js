@@ -35,16 +35,23 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-].filter(Boolean);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow: no origin (curl/Postman), chrome-extension://, and any HTTP(S) origin
+    if (!origin || origin.startsWith('chrome-extension://') || /^https?:\/\//.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
 
-app.use(cors());
-
-// Ensure preflight OPTIONS requests are handled before any other middleware
-app.options('*', cors());
+// Handle preflight OPTIONS first, then apply to all routes
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // Parse incoming JSON bodies (e.g. POST /api/auth/login sends { email, password })
