@@ -35,9 +35,29 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// CORS (Cross-Origin Resource Sharing) controls which domains can call this API.
-// Without this, the browser would block requests from the React frontend.
-app.use(cors());
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    // and all chrome-extension:// origins
+    if (!origin || origin.startsWith('chrome-extension://') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Ensure preflight OPTIONS requests are handled before any other middleware
+app.options('*', cors());
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // Parse incoming JSON bodies (e.g. POST /api/auth/login sends { email, password })
