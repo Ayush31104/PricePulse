@@ -74,12 +74,15 @@ export default function ProductCard({ product, isCheapest: isCheapestProp, allPr
           <WishlistButton product={product} />
         </div>
 
-        {/* Image */}
-        <div className="h-48 overflow-hidden bg-white/5">
+        {/* Image — click opens Price Details modal */}
+        <div
+          className="h-48 overflow-hidden bg-white/5 cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
+        >
           <img
             src={product.image || `https://placehold.co/400x300/1e1b4b/94a3b8?text=${encodeURIComponent(product.platform)}`}
             alt={title}
-            className="h-full w-full object-cover transition-transform duration-500 hover:scale-110"
+            className="h-full w-full object-cover transition-transform duration-500 hover:scale-110 hover:brightness-90"
             onError={(e) => {
               e.target.src = `https://placehold.co/400x300/1e1b4b/94a3b8?text=${encodeURIComponent(product.platform)}`;
             }}
