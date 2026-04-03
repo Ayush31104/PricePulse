@@ -42,8 +42,14 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
   const isCheapest = product.isCheapest || isCheapestProp;
 
   return (
-    <div className={`product-card relative flex flex-col rounded-2xl overflow-hidden
-                     ${isCheapest ? 'ring-2 ring-green-400/60 shadow-green-500/20' : ''}`}>
+    <a
+      href={productUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`product-card relative flex flex-col rounded-2xl overflow-hidden cursor-pointer
+                   no-underline text-inherit block
+                   ${isCheapest ? 'ring-2 ring-green-400/60 shadow-green-500/20' : ''}`}
+    >
 
       {/* Best Price ribbon */}
       {isCheapest && (
@@ -104,6 +110,7 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
             href={productUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className={`view-deal-btn flex items-center gap-1.5 text-xs font-semibold
                         px-4 py-2 rounded-xl text-white
                         ${isCheapest
@@ -115,6 +122,6 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
           </a>
         </div>
       </div>
-    </div>
+    </a>
   );
 }
