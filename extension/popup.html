@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PricePulse</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <!-- Font Awesome for icons (local bundle) -->
+  <link rel="stylesheet" href="fa.min.css" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -16,53 +16,170 @@
       <img src="icons/icon48.png" alt="" class="logo-icon" />
       <span class="logo-text">PricePulse</span>
     </span>
+    <div class="header-actions">
+      <!-- Best Offers Toggle -->
+      <label class="toggle-wrap" title="Show best offers">
+        <span class="toggle-label">Best Offers</span>
+        <div class="toggle-switch">
+          <input type="checkbox" id="toggle-offers" checked />
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+    </div>
   </header>
 
-  <!-- ── Main content area ───────────────────────────────────────────────── -->
-  <main>
-
-    <!-- Product bar: auto-detected product title + refresh button -->
+  <!-- ── Search bar ───────────────────────────────────────────────────────── -->
+  <div id="search-section">
     <div id="product-bar" class="hidden">
+      <i class="fa-solid fa-tag product-bar-icon"></i>
       <p id="product-name"></p>
-      <button id="btn-refresh" title="Refresh prices">↻</button>
+      <button id="btn-refresh" title="Refresh prices"><i class="fa-solid fa-rotate-right"></i></button>
     </div>
-
-    <!-- Manual search bar -->
     <div id="search-bar">
-      <input id="search-input" type="text" placeholder="🔍  Search a product…" />
-      <button id="btn-search">Search</button>
+      <input id="search-input" type="text" placeholder="Search a product…" />
+      <button id="btn-search"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </div>
+  </div>
+
+  <!-- ── States ───────────────────────────────────────────────────────────── -->
+  <div id="state-spinner" class="hidden">
+    <div class="spinner"></div>
+    <p>Comparing prices…</p>
+    <p id="cold-start-hint" class="hidden">Backend is waking up, please wait…</p>
+  </div>
+  <div id="state-error" class="hidden">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <p id="error-msg"></p>
+  </div>
+  <div id="state-empty" class="hidden">
+    <i class="fa-solid fa-box-open"></i>
+    <p>No results found</p>
+  </div>
+
+  <!-- ── Main content (shown after results) ──────────────────────────────── -->
+  <div id="main-content" class="hidden">
+
+    <!-- Live results meta bar -->
+    <div id="results-meta-bar"></div>
+
+    <!-- ── Tab Bar ─────────────────────────────────────────────────────────── -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="price-history">
+        <i class="fa-solid fa-chart-line"></i> Price History
+      </button>
+      <button class="tab-btn" data-tab="similar-products">
+        <i class="fa-solid fa-layer-group"></i> Similar Products
+      </button>
     </div>
 
-    <!-- Loading state -->
-    <div id="state-spinner" class="hidden">
-      <div class="spinner"></div>
-      <p>Comparing prices…</p>
-      <p id="cold-start-hint" class="hidden" style="font-size:0.75rem;opacity:0.6;margin-top:4px">Backend is waking up, please wait…</p>
+    <!-- ── TAB: Price History ───────────────────────────────────────────────── -->
+    <div id="tab-price-history" class="tab-panel active">
+
+      <!-- A. Price Chart -->
+      <div class="section-card chart-card">
+        <div class="chart-header">
+          <span class="section-title"><i class="fa-solid fa-chart-area"></i> Price Trend</span>
+          <div class="chart-filters" id="chart-filters">
+            <button class="filter-btn active" data-range="1M">1M</button>
+            <button class="filter-btn" data-range="3M">3M</button>
+            <button class="filter-btn" data-range="6M">6M</button>
+            <button class="filter-btn" data-range="All">All</button>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-line solid"></span> Normal Price</span>
+          <span class="legend-item"><span class="legend-line dashed"></span> With Offers</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="price-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- B. Price Stats Cards (2x2 grid) -->
+      <div class="stats-grid" id="price-stats-grid">
+        <div class="stat-card stat-high">
+          <div class="stat-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Highest</span>
+            <span class="stat-value" id="stat-highest">—</span>
+          </div>
+        </div>
+        <div class="stat-card stat-low">
+          <div class="stat-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Lowest</span>
+            <span class="stat-value" id="stat-lowest">—</span>
+          </div>
+        </div>
+        <div class="stat-card stat-avg">
+          <div class="stat-icon"><i class="fa-solid fa-chart-bar"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Average</span>
+            <span class="stat-value" id="stat-average">—</span>
+          </div>
+        </div>
+        <div class="stat-card stat-current">
+          <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Current</span>
+            <span class="stat-value" id="stat-current">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Best Deal Card -->
+      <div class="section-card deal-card" id="best-deal-card">
+        <div class="deal-badge"><i class="fa-solid fa-fire"></i> Best Deal</div>
+        <div class="deal-body">
+          <div class="deal-prices">
+            <span class="deal-current" id="deal-current-price">—</span>
+            <span class="deal-old" id="deal-old-price">—</span>
+          </div>
+          <div class="deal-savings" id="deal-savings">
+            <i class="fa-solid fa-tag"></i> You save <span id="deal-savings-amount">—</span>
+          </div>
+        </div>
+        <a class="deal-btn" id="deal-link" href="#" target="_blank">
+          Buy Now <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- D. Buy Recommendation -->
+      <div class="section-card buy-rec-card">
+        <div class="section-title"><i class="fa-solid fa-lightbulb"></i> Should you buy now?</div>
+        <div class="gauge-wrap">
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill"></div>
+          </div>
+          <div class="gauge-labels">
+            <span class="gauge-label-wait">Wait</span>
+            <span class="gauge-label-buy">Buy Now</span>
+          </div>
+          <div class="gauge-score-wrap">
+            <span class="gauge-score" id="gauge-score">—</span>
+            <span class="gauge-verdict" id="gauge-verdict">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live price results list -->
+      <div class="section-title results-section-title hidden" id="live-results-title">
+        <i class="fa-solid fa-store"></i> Live Prices
+      </div>
+      <div id="results"></div>
+
+    </div><!-- /tab-price-history -->
+
+    <!-- ── TAB: Similar Products ─────────────────────────────────────────────── -->
+    <div id="tab-similar-products" class="tab-panel">
+      <div class="similar-list" id="similar-list">
+        <!-- Populated by JS -->
+      </div>
     </div>
 
-    <!-- Error state -->
-    <div id="state-error" class="hidden">
-      <p id="error-msg"></p>
-    </div>
+  </div><!-- /main-content -->
 
-    <!-- Empty state -->
-    <div id="state-empty" class="hidden">
-      <p>✦ No results found</p>
-    </div>
-
-    <!-- Results container -->
-    <div id="results"></div>
-
-    <!-- Price History -->
-    <div id="price-history" class="hidden">
-      <h3>📈 Price History</h3>
-      <canvas id="price-chart" width="300" height="180"></canvas>
-      <div id="price-stats"></div>
-    </div>
-
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="chart.min.js"></script>
   <script src="services/priceHistoryStorage.js"></script>
   <script src="services/priceTracker.js"></script>
   <script src="popup.js"></script>

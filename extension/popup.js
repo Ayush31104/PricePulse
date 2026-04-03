@@ -1,32 +1,119 @@
-// extension/popup.js
-// Loaded as a plain <script> tag after:
-//   chart.js, priceHistoryStorage.js, priceTracker.js
-// All three expose globals: Chart, window.priceHistoryStorage,
-// window.trackProductPrice, window.generateProductId
+// ============================================================
+// extension/popup.js — Main popup controller
+// ============================================================
+// Depends on (loaded before this file):
+//   Chart.js, priceHistoryStorage.js, priceTracker.js
+// ============================================================
 
 const $ = (id) => document.getElementById(id);
 
+// ── DOM refs ──────────────────────────────────────────────────────────────────
 const ui = {
-  productBar:     $('product-bar'),
-  productName:    $('product-name'),
-  btnRefresh:     $('btn-refresh'),
-  searchInput:    $('search-input'),
-  btnSearch:      $('btn-search'),
-  spinner:        $('state-spinner'),
-  coldStartHint:  $('cold-start-hint'),
-  error:          $('state-error'),
-  errorMsg:       $('error-msg'),
-  empty:          $('state-empty'),
-  results:        $('results'),
-  priceHistory:   $('price-history'),
-  priceChart:     $('price-chart'),
-  priceStats:     $('price-stats'),
+  productBar:    $('product-bar'),
+  productName:   $('product-name'),
+  btnRefresh:    $('btn-refresh'),
+  searchInput:   $('search-input'),
+  btnSearch:     $('btn-search'),
+  spinner:       $('state-spinner'),
+  coldStartHint: $('cold-start-hint'),
+  error:         $('state-error'),
+  errorMsg:      $('error-msg'),
+  empty:         $('state-empty'),
+  mainContent:   $('main-content'),
+  metaBar:       $('results-meta-bar'),
+  results:       $('results'),
+  liveTitle:     $('live-results-title'),
+  // Stats
+  statHighest:   $('stat-highest'),
+  statLowest:    $('stat-lowest'),
+  statAverage:   $('stat-average'),
+  statCurrent:   $('stat-current'),
+  // Deal
+  dealCurrentPrice: $('deal-current-price'),
+  dealOldPrice:     $('deal-old-price'),
+  dealSavings:      $('deal-savings-amount'),
+  dealLink:         $('deal-link'),
+  // Gauge
+  gaugeFill:    $('gauge-fill'),
+  gaugeScore:   $('gauge-score'),
+  gaugeVerdict: $('gauge-verdict'),
+  // Toggle
+  toggleOffers: $('toggle-offers'),
+  // Similar
+  similarList:  $('similar-list'),
 };
 
 let currentQuery     = '';
 let currentProductId = null;
 let chart            = null;
 let coldStartTimer   = null;
+let showOffers       = true;   // controlled by the toggle
+
+// ── Dummy price history data (all time) ──────────────────────────────────────
+// Each entry: { date: 'YYYY-MM-DD', normal: price, offer: price }
+const DUMMY_HISTORY = (() => {
+  const base = 28999;
+  const entries = [];
+  const now = new Date();
+  for (let i = 179; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateKey = d.toISOString().split('T')[0];
+    // Simulate realistic price fluctuation
+    const wave    = Math.sin(i / 20) * 1800;
+    const noise   = (Math.random() - 0.5) * 600;
+    const normal  = Math.round(base + wave + noise);
+    const offer   = Math.round(normal * (0.88 + Math.random() * 0.05)); // 5–12% off
+    entries.push({ date: dateKey, normal, offer });
+  }
+  return entries;
+})();
+
+// ── Dummy similar products ────────────────────────────────────────────────────
+const DUMMY_SIMILAR = [
+  {
+    title:    'Samsung Galaxy S23 FE 5G',
+    platform: 'Flipkart',
+    price:    34999,
+    image:    'https://placehold.co/80x80/1e3a5f/93c5fd?text=S23',
+    url:      'https://www.flipkart.com',
+  },
+  {
+    title:    'OnePlus 12R 5G 128GB',
+    platform: 'Amazon',
+    price:    29999,
+    image:    'https://placehold.co/80x80/1e3a2f/6ee7b7?text=OP12',
+    url:      'https://www.amazon.in',
+  },
+  {
+    title:    'Motorola Edge 40 Neo',
+    platform: 'Amazon',
+    price:    23999,
+    image:    'https://placehold.co/80x80/2d1b4e/c4b5fd?text=Moto',
+    url:      'https://www.amazon.in',
+  },
+  {
+    title:    'iQOO Z9 5G 8GB/128GB',
+    platform: 'Flipkart',
+    price:    18999,
+    image:    'https://placehold.co/80x80/3b1f1f/fca5a5?text=iQOO',
+    url:      'https://www.flipkart.com',
+  },
+  {
+    title:    'Realme 12 Pro+ 5G',
+    platform: 'Flipkart',
+    price:    26999,
+    image:    'https://placehold.co/80x80/1f2d3b/93c5fd?text=RM12',
+    url:      'https://www.flipkart.com',
+  },
+  {
+    title:    'Nothing Phone (2a)',
+    platform: 'Flipkart',
+    price:    23999,
+    image:    'https://placehold.co/80x80/1a1a2e/e2e8f0?text=NP2a',
+    url:      'https://www.flipkart.com',
+  },
+];
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
@@ -61,12 +148,39 @@ ui.btnRefresh.addEventListener('click', () => {
   }
 });
 
+// Toggle: re-render chart when "Show Best Offers" is switched
+ui.toggleOffers.addEventListener('change', () => {
+  showOffers = ui.toggleOffers.checked;
+  renderChart(currentChartRange);
+});
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+    btn.classList.add('active');
+    $(`tab-${btn.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ── Chart filter buttons ──────────────────────────────────────────────────────
+let currentChartRange = '1M';
+
+document.querySelectorAll('.filter-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChartRange = btn.dataset.range;
+    renderChart(currentChartRange);
+  });
+});
+
 // ── getPageInfo ───────────────────────────────────────────────────────────────
 async function getPageInfo() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return { title: null, url: null };
-
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
@@ -75,8 +189,7 @@ async function getPageInfo() {
           'span.B_NuCI', 'h1.yhB1nd span',
           'h1.x-item-title__mainTitle span', '#itemTitle',
           'h1[data-buy-box-listing-title]', 'h1.wt-text-body-03',
-          'h1.pdp-title', 'h1.pdp-e-i-head',
-          'h1',
+          'h1.pdp-title', 'h1.pdp-e-i-head', 'h1',
         ];
         for (const sel of SELECTORS) {
           const t = document.querySelector(sel)?.innerText?.trim();
@@ -100,31 +213,37 @@ async function search(query) {
     render(data);
   } catch (err) {
     console.error('[PricePulse] Search failed:', err);
-    setState('error', err.message || 'Could not reach the backend. It may be waking up — please try again in a few seconds.');
+    setState('error', err.message || 'Could not reach the backend. It may be waking up — please try again.');
   }
 }
 
 // ── render ────────────────────────────────────────────────────────────────────
-// Products arrive pre-ranked from the backend (exact → same-brand → similar → other).
-// We group them into labelled sections so the most relevant results appear first.
-//
-// matchGroup values set by backend rankProducts util:
-//   "exact"      → Best Match
-//   "same-brand" → Same Brand
-//   "similar"    → Similar Products
-//   "other"      → Other Alternatives
 function render({ products, meta, fromCache }) {
   if (!products?.length) { setState('empty'); return; }
 
   setState('results');
 
-  const fetchedAt  = meta?.fetchedAt ? new Date(meta.fetchedAt) : new Date();
-  const timeStr    = fetchedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-  const partialMsg = meta?.partialErrors?.length
-    ? `<p class="partial-warn">⚠ Partial results — ${meta.partialErrors.join('; ')}</p>`
-    : '';
+  // ── Meta bar ──
+  const fetchedAt = meta?.fetchedAt ? new Date(meta.fetchedAt) : new Date();
+  const timeStr   = fetchedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  ui.metaBar.innerHTML =
+    `${fromCache
+      ? '<span class="badge badge-cache">⚡ Cached</span>'
+      : '<span class="badge badge-live">🟢 Live</span>'}
+     <span class="updated-at">Updated ${timeStr}</span>`;
 
-  // Section config — order matters: best matches shown first
+  // ── Price stats from live results ──
+  const prices  = products.map((p) => p.price).filter(Boolean);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+  const current  = prices[0] ?? minPrice;
+
+  updateStats(minPrice, maxPrice, avgPrice, current);
+  updateDealCard(minPrice, maxPrice, products);
+  updateGauge(current, minPrice, maxPrice, avgPrice);
+
+  // ── Live results list ──
   const GROUP_ORDER  = ['exact', 'same-brand', 'similar', 'other'];
   const GROUP_LABELS = {
     'exact':      '🔥 Best Match',
@@ -133,42 +252,27 @@ function render({ products, meta, fromCache }) {
     'other':      '◈ Other Alternatives',
   };
   const LABEL_CLASS = {
-    'exact':      'label-exact',
-    'same-brand': 'label-same-brand',
-    'similar':    'label-similar',
-    'other':      'label-other',
+    'exact': 'label-exact', 'same-brand': 'label-same-brand',
+    'similar': 'label-similar', 'other': 'label-other',
   };
 
-  // Bucket each product into its group (fall back to "other" for old cached results)
   const groups = {};
   for (const p of products) {
     const g = GROUP_ORDER.includes(p.matchGroup) ? p.matchGroup : 'other';
     (groups[g] = groups[g] || []).push(p);
   }
 
-  // Cheapest price across ALL products (for the green BEST PRICE badge)
-  const minPrice = Math.min(...products.map((p) => p.price));
+  const partialMsg = meta?.partialErrors?.length
+    ? `<p class="partial-warn">⚠ Partial results — ${meta.partialErrors.join('; ')}</p>` : '';
 
-  let html =
-    `<div class="results-meta">
-       ${fromCache
-         ? '<span class="badge badge-cache">⚡ Cached</span>'
-         : '<span class="badge badge-live">🟢 Live</span>'}
-       <span class="updated-at">Updated ${timeStr}</span>
-     </div>
-     ${partialMsg}`;
-
+  let html = partialMsg;
   for (const group of GROUP_ORDER) {
     if (!groups[group]?.length) continue;
-
-    html += `<div class="result-section">
-      <div class="section-header">${GROUP_LABELS[group]}</div>`;
-
+    html += `<div class="result-section"><div class="section-header">${GROUP_LABELS[group]}</div>`;
     for (const p of groups[group]) {
       const isCheapest = p.price === minPrice;
       const stars = p.rating
-        ? `${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5 - Math.round(p.rating))} ${p.rating}`
-        : '';
+        ? `${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5 - Math.round(p.rating))} ${p.rating}` : '';
       html += `
         <div class="card ${isCheapest ? 'cheapest' : ''}">
           <div class="card-body">
@@ -186,119 +290,247 @@ function render({ products, meta, fromCache }) {
           </div>
         </div>`;
     }
-    html += '</div>'; // close result-section
+    html += '</div>';
   }
 
   ui.results.innerHTML = html;
+  show(ui.liveTitle);
 
-  // Track price and show history chart
+  // ── Price history chart (merge backend + local) ──
   if (currentProductId && currentQuery) {
-    window.trackProductPrice({
-      productId:    currentProductId,
-      title:        currentQuery,
-      currentPrice: minPrice,
-    });
+    window.trackProductPrice({ productId: currentProductId, title: currentQuery, currentPrice: minPrice });
     chrome.runtime.sendMessage({
-      type:      'RECORD_PRICE_SNAPSHOT',
-      productId: currentProductId,
-      title:     currentQuery,
-      price:     minPrice,
+      type: 'RECORD_PRICE_SNAPSHOT', productId: currentProductId, title: currentQuery, price: minPrice,
     });
-    showPriceHistory(currentProductId);
+    loadAndRenderChart(currentProductId);
+  } else {
+    // No real history yet — use dummy data
+    renderChart(currentChartRange);
   }
+
+  // ── Similar products (dummy) ──
+  renderSimilarProducts();
 }
 
-// ── showPriceHistory ──────────────────────────────────────────────────────────
-// Data flow:
-//   1. Ask background.js for backend history (GET /api/products/price-history)
-//   2. Also read local IndexedDB history (works offline)
-//   3. Merge both sources, de-duplicate by date string, sort chronologically
-//   4. Render Chart.js line chart + lowest / highest / avg stats
-async function showPriceHistory(productId) {
+// ── updateStats ───────────────────────────────────────────────────────────────
+function updateStats(min, max, avg, current) {
+  ui.statHighest.textContent = formatInr(max);
+  ui.statLowest.textContent  = formatInr(min);
+  ui.statAverage.textContent = formatInr(avg);
+  ui.statCurrent.textContent = formatInr(current);
+}
+
+// ── updateDealCard ────────────────────────────────────────────────────────────
+function updateDealCard(minPrice, maxPrice, products) {
+  const bestProduct = products.find((p) => p.price === minPrice) || products[0];
+  const savings     = maxPrice - minPrice;
+  const savingsPct  = Math.round((savings / maxPrice) * 100);
+
+  ui.dealCurrentPrice.textContent = formatInr(minPrice);
+  ui.dealOldPrice.textContent     = formatInr(maxPrice);
+  ui.dealSavings.textContent      = `${formatInr(savings)} (${savingsPct}% off)`;
+  ui.dealLink.href                = bestProduct?.url || '#';
+}
+
+// ── updateGauge ───────────────────────────────────────────────────────────────
+// Score 0–100: higher = better time to buy
+// Logic: if current ≤ avg → good deal (score 60–90), else wait (score 20–50)
+function updateGauge(current, min, max, avg) {
+  const range = max - min || 1;
+  // Normalise: 100 = at all-time low, 0 = at all-time high
+  const rawScore = Math.round(((max - current) / range) * 100);
+  const score    = Math.max(5, Math.min(95, rawScore));
+  const isBuy    = score >= 55;
+
+  ui.gaugeFill.style.width      = `${score}%`;
+  ui.gaugeFill.style.background = isBuy
+    ? 'linear-gradient(90deg, #10b981, #34d399)'
+    : 'linear-gradient(90deg, #ef4444, #f97316)';
+
+  ui.gaugeScore.textContent = `${score}/100`;
+  ui.gaugeVerdict.textContent = isBuy ? '✓ Buy Now' : '⏳ Wait';
+  ui.gaugeVerdict.className   = `gauge-verdict ${isBuy ? 'verdict-buy' : 'verdict-wait'}`;
+}
+
+// ── loadAndRenderChart ────────────────────────────────────────────────────────
+// Tries to load real history; falls back to dummy data
+async function loadAndRenderChart(productId) {
   try {
     const [backendResult, localHistory] = await Promise.all([
       chrome.runtime.sendMessage({ type: 'GET_PRICE_HISTORY', productId }),
       window.priceHistoryStorage.getProductHistory(productId),
     ]);
 
-    // Normalise backend snapshots → { dateKey, price }
     const backendPoints = (backendResult?.data ?? []).map((s) => ({
-      dateKey: s.date,
-      price:   s.price,
+      date: s.date, normal: s.price, offer: Math.round(s.price * 0.92),
     }));
-
-    // Normalise local IndexedDB snapshots → { dateKey, price }
     const localPoints = (localHistory?.prices ?? []).map((p) => ({
-      dateKey: new Date(p.timestamp).toISOString().split('T')[0],
-      price:   p.price,
+      date:   new Date(p.timestamp).toISOString().split('T')[0],
+      normal: p.price,
+      offer:  Math.round(p.price * 0.92),
     }));
 
-    // Merge: one entry per calendar day; backend wins over local for same day
     const byDate = new Map();
-    [...localPoints, ...backendPoints].forEach(({ dateKey, price }) => {
-      byDate.set(dateKey, price);
+    [...localPoints, ...backendPoints].forEach(({ date, normal, offer }) => {
+      byDate.set(date, { normal, offer });
     });
 
-    const merged = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const merged = [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, ...v }));
 
-    if (merged.length < 2) { hide(ui.priceHistory); return; }
-
-    show(ui.priceHistory);
-
-    if (chart) { chart.destroy(); chart = null; }
-
-    const labels = merged.map(([date]) =>
-      new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-    );
-    const data = merged.map(([, price]) => price);
-
-    chart = new Chart(ui.priceChart.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label:                'Price (₹)',
-          data,
-          borderColor:          '#6366f1',
-          backgroundColor:      'rgba(99,102,241,0.08)',
-          tension:              0.3,
-          pointRadius:          4,
-          pointBackgroundColor: '#6366f1',
-        }],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => ` ${formatInr(ctx.parsed.y)}` } },
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            ticks: { callback: (val) => formatInr(val), font: { size: 10 } },
-          },
-          x: { ticks: { font: { size: 10 } } },
-        },
-      },
-    });
-
-    const minPrice = backendResult?.stats?.min ?? Math.min(...data);
-    const maxPrice = backendResult?.stats?.max ?? Math.max(...data);
-    const avgPrice = backendResult?.stats?.avg ?? Math.round(data.reduce((a, b) => a + b, 0) / data.length);
-    const current  = backendResult?.stats?.current ?? data[data.length - 1];
-    const goodDeal = current <= avgPrice;
-
-    ui.priceStats.innerHTML = `
-      <p><strong>Lowest:</strong>  ${formatInr(minPrice)}</p>
-      <p><strong>Highest:</strong> ${formatInr(maxPrice)}</p>
-      <p><strong>Avg:</strong>     ${formatInr(avgPrice)}
-        ${goodDeal ? '<span style="color:#16a34a;font-weight:700"> ✓ Good deal</span>' : ''}
-      </p>
-    `;
-  } catch (err) {
-    console.error('Failed to show price history:', err);
-    hide(ui.priceHistory);
+    // Use real data if we have enough points, otherwise fall back to dummy
+    renderChart(currentChartRange, merged.length >= 2 ? merged : null);
+  } catch {
+    renderChart(currentChartRange);
   }
+}
+
+// ── renderChart ───────────────────────────────────────────────────────────────
+// @param range  — '1M' | '3M' | '6M' | 'All'
+// @param data   — array of { date, normal, offer } or null (uses DUMMY_HISTORY)
+function renderChart(range, data = null) {
+  const source = data || DUMMY_HISTORY;
+
+  // Filter by range
+  const cutoff = new Date();
+  const days   = { '1M': 30, '3M': 90, '6M': 180, 'All': Infinity };
+  cutoff.setDate(cutoff.getDate() - (days[range] ?? 30));
+
+  const filtered = source.filter((e) => new Date(e.date) >= cutoff);
+  if (!filtered.length) return;
+
+  // Thin labels for readability (show at most ~8 labels)
+  const step   = Math.max(1, Math.floor(filtered.length / 8));
+  const labels = filtered.map((e, i) =>
+    i % step === 0
+      ? new Date(e.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+      : ''
+  );
+
+  const normalData = filtered.map((e) => e.normal);
+  const offerData  = filtered.map((e) => e.offer);
+
+  if (chart) { chart.destroy(); chart = null; }
+
+  const ctx = $('price-chart').getContext('2d');
+
+  // Gradient fill for normal price line
+  const grad = ctx.createLinearGradient(0, 0, 0, 140);
+  grad.addColorStop(0, 'rgba(16,185,129,.25)');
+  grad.addColorStop(1, 'rgba(16,185,129,.01)');
+
+  const datasets = [
+    {
+      label:                'Normal Price',
+      data:                 normalData,
+      borderColor:          '#10b981',
+      backgroundColor:      grad,
+      borderWidth:          2,
+      tension:              0.35,
+      pointRadius:          0,
+      pointHoverRadius:     4,
+      pointHoverBackgroundColor: '#10b981',
+      fill:                 true,
+    },
+  ];
+
+  // Only add offer line when toggle is ON
+  if (showOffers) {
+    datasets.push({
+      label:           'With Offers',
+      data:            offerData,
+      borderColor:     '#f59e0b',
+      backgroundColor: 'transparent',
+      borderWidth:     1.5,
+      borderDash:      [5, 4],
+      tension:         0.35,
+      pointRadius:     0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#f59e0b',
+      fill:            false,
+    });
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      interaction:         { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15,12,41,.92)',
+          borderColor:     'rgba(255,255,255,.1)',
+          borderWidth:     1,
+          titleColor:      'rgba(255,255,255,.5)',
+          bodyColor:       '#e2e8f0',
+          padding:         8,
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: ${formatInr(ctx.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          grid:  { color: 'rgba(255,255,255,.05)' },
+          ticks: {
+            color:    'rgba(255,255,255,.3)',
+            font:     { size: 9 },
+            callback: (val) => formatInr(val),
+            maxTicksLimit: 5,
+          },
+          border: { display: false },
+        },
+        x: {
+          grid:  { display: false },
+          ticks: { color: 'rgba(255,255,255,.3)', font: { size: 9 }, maxRotation: 0 },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  // Update stats from chart data
+  const allNormal = normalData;
+  updateStats(
+    Math.min(...allNormal),
+    Math.max(...allNormal),
+    Math.round(allNormal.reduce((a, b) => a + b, 0) / allNormal.length),
+    allNormal[allNormal.length - 1]
+  );
+  updateDealCard(
+    Math.min(...allNormal),
+    Math.max(...allNormal),
+    [{ price: Math.min(...allNormal), url: '#' }]
+  );
+  updateGauge(
+    allNormal[allNormal.length - 1],
+    Math.min(...allNormal),
+    Math.max(...allNormal),
+    Math.round(allNormal.reduce((a, b) => a + b, 0) / allNormal.length)
+  );
+}
+
+// ── renderSimilarProducts ─────────────────────────────────────────────────────
+function renderSimilarProducts() {
+  ui.similarList.innerHTML = DUMMY_SIMILAR.map((p) => `
+    <div class="similar-card">
+      <img class="similar-img" src="${esc(p.image)}" alt="${esc(p.title)}"
+           onerror="this.src='https://placehold.co/80x80/1e1b4b/94a3b8?text=IMG'" />
+      <div class="similar-info">
+        <div class="similar-title">${esc(p.title)}</div>
+        <div class="similar-platform">${esc(p.platform)}</div>
+        <div class="similar-price">${formatInr(p.price)}</div>
+      </div>
+      <a class="similar-btn" href="${esc(p.url)}" target="_blank">
+        View <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px"></i>
+      </a>
+    </div>
+  `).join('');
 }
 
 // ── setState ──────────────────────────────────────────────────────────────────
@@ -307,8 +539,9 @@ function setState(state, msg = '') {
   hide(ui.spinner);
   hide(ui.error);
   hide(ui.empty);
-  hide(ui.priceHistory);
-  if (state !== 'results') ui.results.innerHTML = '';
+  hide(ui.mainContent);
+  hide(ui.liveTitle);
+
   if (state === 'loading') {
     show(ui.spinner);
     hide(ui.coldStartHint);
@@ -318,13 +551,15 @@ function setState(state, msg = '') {
     show(ui.error);
   } else if (state === 'empty') {
     show(ui.empty);
+  } else if (state === 'results') {
+    show(ui.mainContent);
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function show(el) { if (el) el.classList.remove('hidden'); }
 function hide(el) { if (el) el.classList.add('hidden'); }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
 function esc(str = '') {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')

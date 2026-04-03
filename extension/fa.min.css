@@ -1,0 +1,31 @@
+/* Font Awesome 6 Free — Solid only (local, for Chrome extension) */
+:root { --fa-font-solid: normal 900 1em/1 "Font Awesome 6 Free"; }
+
+@font-face {
+  font-family: "Font Awesome 6 Free";
+  font-style: normal;
+  font-weight: 900;
+  font-display: block;
+  src: url(webfonts/fa-solid-900.woff2) format("woff2");
+}
+
+.fa-solid, .fas { font-family: "Font Awesome 6 Free"; font-weight: 900; font-style: normal; -webkit-font-smoothing: antialiased; display: inline-block; }
+
+/* Only the icons actually used in popup.html */
+.fa-tag::before                        { content: "\f02b"; }
+.fa-rotate-right::before               { content: "\f2f9"; }
+.fa-magnifying-glass::before           { content: "\f002"; }
+.fa-circle-exclamation::before         { content: "\f06a"; }
+.fa-box-open::before                   { content: "\f49e"; }
+.fa-chart-line::before                 { content: "\f201"; }
+.fa-layer-group::before                { content: "\f5fd"; }
+.fa-chart-area::before                 { content: "\f1fe"; }
+.fa-arrow-trend-up::before             { content: "\e098"; }
+.fa-arrow-trend-down::before           { content: "\e097"; }
+.fa-chart-bar::before                  { content: "\f080"; }
+.fa-bolt::before                       { content: "\f0e7"; }
+.fa-fire::before                       { content: "\f06d"; }
+.fa-arrow-right::before                { content: "\f061"; }
+.fa-lightbulb::before                  { content: "\f0eb"; }
+.fa-store::before                      { content: "\f54e"; }
+.fa-arrow-up-right-from-square::before { content: "\f08e"; }
