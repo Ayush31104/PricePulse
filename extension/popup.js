@@ -16,8 +16,7 @@ const ui = {
   empty:         $('state-empty'),
   mainContent:   $('main-content'),
   metaBar:       $('results-meta-bar'),
-  results:       $('results'),
-  liveTitle:     $('live-results-title'),
+  liveTitle:     null, // removed from DOM
   statHighest:   $('stat-highest'),
   statLowest:    $('stat-lowest'),
   statAverage:   $('stat-average'),
@@ -31,6 +30,7 @@ const ui = {
   gaugeVerdict: $('gauge-verdict'),
   toggleOffers: $('toggle-offers'),
   similarList:  $('similar-list'),
+  similarCount: $('similar-count'),
 };
 
 let currentQuery     = '';
@@ -231,42 +231,14 @@ async function render({ products, meta, fromCache }) {
   updateDealCard(minPrice, livePrice, products);
   updateGauge(livePrice, minPrice, maxPrice, avgPrice);
 
-  // Results list
-  let html = meta?.partialErrors?.length
-    ? `<p class="partial-warn">⚠ Partial results — ${meta.partialErrors.join('; ')}</p>` : '';
-
-  for (const group of GROUP_ORDER) {
-    if (!groups[group]?.length) continue;
-    html += `<div class="result-section"><div class="section-header">${GROUP_LABELS[group]}</div>`;
-    for (const p of groups[group]) {
-      const stars = p.rating ? `${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5 - Math.round(p.rating))} ${p.rating}` : '';
-      html += `
-        <div class="card ${p.price === minPrice ? 'cheapest' : ''}">
-          <div class="card-body">
-            <div class="card-top">
-              <span class="card-platform">${esc(p.platform)}</span>
-              <span class="card-label ${LABEL_CLASS[group]}">${GROUP_LABELS[group]}</span>
-              ${p.price === minPrice ? '<span class="card-badge">BEST PRICE</span>' : ''}
-            </div>
-            <div class="card-title">${esc(p.name || p.title || '')}</div>
-            ${stars ? `<div class="card-rating">${stars}</div>` : ''}
-          </div>
-          <div class="card-right">
-            <div class="card-price">${formatInr(p.price)}</div>
-            ${p.url ? `<a class="card-link" href="${esc(p.url)}" target="_blank">View →</a>` : ''}
-          </div>
-        </div>`;
-    }
-    html += '</div>';
+  // Badge count
+  if (ui.similarCount) {
+    ui.similarCount.textContent = products.length;
+    ui.similarCount.classList.remove('hidden');
   }
-  ui.results.innerHTML = html;
-  show(ui.liveTitle);
 
-  const similarRaw = [
-    ...(groups['similar']    || []),
-    ...(groups['same-brand'] || []),
-    ...(groups['other']      || []),
-  ].slice(0, 6);
+  // All products passed to the unified card renderer (dedup happens inside)
+  const similarRaw = products;
 
   lastApiData = { allPrices, similarRaw, chartPoints: null };
 
@@ -371,6 +343,17 @@ async function loadAndRenderChart(productId, livePrice, similarRaw) {
     let chartPoints = [...byDate.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, v]) => ({ date, ...v }));
+
+    // Guard: need at least 2 points to draw a meaningful line
+    if (chartPoints.length < 2) {
+      const wrap = document.querySelector('.chart-wrap');
+      if (wrap) {
+        if (chart) { chart.destroy(); chart = null; }
+        wrap.innerHTML = '<p style="color:rgba(255,255,255,.4);font-size:11px;text-align:center;padding:40px 12px">Price tracking started. The chart will appear after a few more visits to this product.</p>';
+      }
+      renderSimilarProducts(similarRaw);
+      return;
+    }
 
     if (!chartPoints.length) chartPoints = buildFallbackPoints(livePrice);
 
@@ -534,30 +517,59 @@ function showChartEmpty() {
 }
 
 // ── renderSimilarProducts ─────────────────────────────────────────────────────
+const GROUP_LABELS_SP = { exact: '🔥 Best Match', 'same-brand': '🏷️ Same Brand', similar: '✦ Similar', other: '◈ Other' };
+const LABEL_CLASS_SP  = { exact: 'label-exact', 'same-brand': 'label-same-brand', similar: 'label-similar', other: 'label-other' };
+
 function renderSimilarProducts(products = []) {
   if (!products.length) {
-    ui.similarList.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:16px">No similar products found</p>';
+    ui.similarList.innerHTML = '<p style="color:rgba(255,255,255,.4);text-align:center;padding:16px">No products found</p>';
     return;
   }
-  ui.similarList.innerHTML = products.map(p => `
-    <div class="similar-card">
-      <img class="similar-img" src="${esc(p.image || p.thumbnail || '')}" alt="${esc(p.name || p.title || '')}"
-           onerror="this.src='https://placehold.co/80x80/1e1b4b/94a3b8?text=IMG'" />
-      <div class="similar-info">
-        <div class="similar-title">${esc(p.name || p.title || '')}</div>
-        <div class="similar-platform">${esc(p.platform || '')}</div>
-        <div class="similar-price">${formatInr(p.price)}</div>
+
+  // Deduplicate by URL, falling back to title+platform as key
+  const seen   = new Map();
+  const unique = [];
+  for (const p of products) {
+    const key = p.url || ((p.name || p.title || '') + '|' + (p.platform || ''));
+    if (!seen.has(key)) { seen.set(key, true); unique.push(p); }
+  }
+
+  const allPrices = unique.map(p => p.price).filter(Boolean);
+  const minPrice  = allPrices.length ? Math.min(...allPrices) : null;
+
+  ui.similarList.innerHTML = unique.map(p => {
+    const group = p.matchGroup || 'other';
+    const label = GROUP_LABELS_SP[group] || GROUP_LABELS_SP.other;
+    const cls   = LABEL_CLASS_SP[group]  || LABEL_CLASS_SP.other;
+    const stars = p.rating
+      ? '★'.repeat(Math.round(p.rating)) + '☆'.repeat(5 - Math.round(p.rating)) + ` <span class="sp-rating-num">${p.rating}</span>`
+      : '';
+    const isBest = p.price != null && p.price === minPrice;
+    return `
+    <div class="sp-card${isBest ? ' sp-card--best' : ''}">
+      <img class="sp-img" src="${esc(p.image || p.thumbnail || '')}" alt=""
+           onerror="this.src='https://placehold.co/56x56/1e1b4b/94a3b8?text=IMG'" />
+      <div class="sp-body">
+        <div class="sp-top">
+          <span class="sp-platform">${esc(p.platform || '')}</span>
+          <span class="sp-label ${cls}">${label}</span>
+          ${isBest ? '<span class="sp-best-badge">BEST PRICE</span>' : ''}
+        </div>
+        <div class="sp-title">${esc(p.name || p.title || '')}</div>
+        ${stars ? `<div class="sp-rating">${stars}</div>` : ''}
+        <div class="sp-bottom">
+          <span class="sp-price${isBest ? ' sp-price--best' : ''}">${formatInr(p.price)}</span>
+          ${p.url ? `<a class="sp-btn" href="${esc(p.url)}" target="_blank">View <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:8px"></i></a>` : ''}
+        </div>
       </div>
-      <a class="similar-btn" href="${esc(p.url || '#')}" target="_blank">
-        View <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px"></i>
-      </a>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── setState ──────────────────────────────────────────────────────────────────
 function setState(state, msg = '') {
   clearTimeout(coldStartTimer);
-  hide(ui.spinner); hide(ui.error); hide(ui.empty); hide(ui.mainContent); hide(ui.liveTitle);
+  hide(ui.spinner); hide(ui.error); hide(ui.empty); hide(ui.mainContent);
   if (state === 'loading') {
     show(ui.spinner); hide(ui.coldStartHint);
     coldStartTimer = setTimeout(() => show(ui.coldStartHint), 5000);

@@ -46,6 +46,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return false;
   }
 
+  if (msg.type === 'SAVE_PRICE_ENTRY') {
+    savePriceEntry(msg).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
   if (msg.type === 'CLEAR_CACHE') {
     chrome.storage.local.remove(cacheKey(msg.key || msg.query || ''));
     return false;
@@ -55,6 +60,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     fetchPriceHistory(msg.productId)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+
+  if (msg.type === 'GET_LOCAL_HISTORY') {
+    getLocalHistory(msg.title, msg.platform)
+      .then(sendResponse)
+      .catch(() => sendResponse([]));
     return true;
   }
 
@@ -184,4 +196,24 @@ function chromeSet(key, value) {
   return new Promise((resolve) =>
     chrome.storage.local.set({ [key]: value }, resolve)
   );
+}
+
+// ── Local price history (chrome.storage.local) ────────────────────────────────
+const MAX_PH_ENTRIES = 90;
+
+function _phKey(title, platform) {
+  return 'ph_' + (title + '_' + platform).toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 80);
+}
+
+async function savePriceEntry({ title, price, platform, url, date }) {
+  if (!title || price == null) return;
+  const key = _phKey(title, platform);
+  const stored = await chromeGet(key) || [];
+  stored.push({ title, price, platform, url, date: date || new Date().toISOString().split('T')[0] });
+  await chromeSet(key, stored.slice(-MAX_PH_ENTRIES));
+}
+
+async function getLocalHistory(title, platform) {
+  const key = _phKey(title, platform);
+  return (await chromeGet(key)) || [];
 }

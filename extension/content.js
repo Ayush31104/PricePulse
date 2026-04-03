@@ -82,3 +82,34 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // Let the background know this content script is alive on this tab
 chrome.runtime.sendMessage({ type: 'CONTENT_READY', url: location.href }).catch(() => {});
+
+// Auto-record price on every product page load
+(async () => {
+  const title = extractTitle();
+  const price = extractPrice();
+  if (!title || price == null) return;
+
+  const host = location.hostname.toLowerCase();
+  const platform =
+    host.includes('amazon')   ? 'Amazon'   :
+    host.includes('flipkart') ? 'Flipkart' :
+    host.includes('ebay')     ? 'eBay'     :
+    host.includes('etsy')     ? 'Etsy'     :
+    host.includes('myntra')   ? 'Myntra'   :
+    host.includes('snapdeal') ? 'Snapdeal' : 'Unknown';
+
+  try {
+    // priceHistoryStorage.js is not injected into content scripts —
+    // delegate to background via message so chrome.storage.local is accessible.
+    await chrome.runtime.sendMessage({
+      type:     'SAVE_PRICE_ENTRY',
+      title,
+      price,
+      platform,
+      url:      location.href,
+      date:     new Date().toISOString().split('T')[0],
+    });
+  } catch (e) {
+    console.warn('[PricePulse content] savePrice failed:', e.message);
+  }
+})();
