@@ -58,7 +58,7 @@ export default function Navbar() {
           {/* Nav links */}
           <div className="hidden sm:flex items-center gap-6 text-sm font-medium">
             <Link to="/" className="silver-link">Home</Link>
-            <a href="/#download-extension" className="silver-link">How It Works</a>
+            <a href="/#how-it-works" className="silver-link">How It Works</a>
             <a
               href="/#download-extension"
               onClick={handleDownloadClick}
