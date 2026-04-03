@@ -123,6 +123,52 @@ export function scoreProduct(product, query) {
 }
 
 /**
+ * filterProducts(products, query)
+ *
+ * Removes clearly irrelevant products before ranking.
+ * Rules:
+ *   1. If query has a known brand, drop products whose detected brand is
+ *      a DIFFERENT known brand (e.g. query="iPhone" drops OnePlus).
+ *      Products with no detectable brand are kept (accessories, generics).
+ *   2. If query has 2+ significant words, drop products with zero keyword
+ *      overlap.
+ *
+ * Safety net: if filtering leaves fewer than 3 results, returns the
+ * original array unchanged (guards against sparse scraper results).
+ */
+export function filterProducts(products, query) {
+  const queryBrand = extractBrand(query);
+  const words      = queryWords(query);
+
+  if (!queryBrand && words.length < 2) return products;
+
+  const filtered = products.filter((p) => {
+    const title        = normalizeTitle(p.name || p.title || '');
+    const productBrand = extractBrand(p.name || p.title || '');
+
+    // Rule 1: brand mismatch
+    if (queryBrand && productBrand &&
+        productBrand.toLowerCase() !== queryBrand.toLowerCase()) {
+      console.log(`[Filter] Dropped brand mismatch: "${p.name || p.title}" (${productBrand} ≠ ${queryBrand})`);
+      return false;
+    }
+
+    // Rule 2: zero keyword overlap for multi-word queries
+    if (words.length >= 2) {
+      const matchCount = words.filter((w) => title.includes(w)).length;
+      if (matchCount === 0) {
+        console.log(`[Filter] Dropped zero-match: "${p.name || p.title}"`);
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  return filtered.length >= 3 ? filtered : products;
+}
+
+/**
  * rankProducts(products, query)
  * Scores every product, attaches matchGroup, then sorts by:
  *   1. Relevance score (desc)

@@ -1,5 +1,5 @@
 // components/SearchBar.jsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 // Popular search suggestions shown as quick-pick chips
@@ -7,19 +7,7 @@ const SUGGESTIONS = ["iPhone 13", "MacBook Pro", "Sony Headphones", "Samsung Gal
 
 export default function SearchBar({ onSearch, isLoading }) {
   const [value, setValue] = useState("");
-  const [debounced, setDebounced] = useState("");
   const inputRef = useRef(null);
-
-  // Debounce: wait 500ms after the user stops typing before firing search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), 500);
-    return () => clearTimeout(timer);
-  }, [value]);
-
-  // Trigger search whenever debounced value changes (and is non-empty)
-  useEffect(() => {
-    if (debounced.trim()) onSearch(debounced.trim());
-  }, [debounced]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

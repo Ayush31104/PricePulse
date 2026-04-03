@@ -17,7 +17,7 @@ import ebayService     from './ebayService.js';
 import etsyService     from './etsyService.js';
 import { getUsdToInrRate, usdToInr } from '../utils/currencyConverter.js';
 import SearchHistory from '../models/SearchHistory.js';
-import { rankProducts } from '../utils/rankProducts.js';
+import { rankProducts, filterProducts } from '../utils/rankProducts.js';
 
 // Cache TTL: read from .env (CACHE_TTL_MINUTES), default 10 minutes
 const CACHE_TTL_MS = (parseInt(process.env.CACHE_TTL_MINUTES, 10) || 10) * 60 * 1000;
@@ -81,7 +81,11 @@ class ComparisonService {
       ...fromEtsy.map(normalise),
     ];
 
-    const products = rankProducts(allProducts, query).slice(0, 20);
+    // ── Relevance filter — remove clearly unrelated products ─────────────────
+    const relevant = filterProducts(allProducts, query);
+    console.log(`[Search] "${query}" — ${allProducts.length} raw → ${relevant.length} after filter`);
+
+    const products = rankProducts(relevant, query).slice(0, 20);
 
     // ── Price statistics ─────────────────────────────────────────────────────
     const prices = products.map((p) => p.price);

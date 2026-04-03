@@ -503,8 +503,8 @@ header {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(255,255,255,.055);
-  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(30,24,66,.4);
+  border: 1px solid rgba(99,102,241,.15);
   border-radius: 13px;
   padding: 10px 11px;
   transition: transform .2s, box-shadow .2s, border-color .2s;
@@ -512,13 +512,13 @@ header {
 }
 .sp-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(0,0,0,.28);
-  border-color: rgba(255,255,255,.16);
+  box-shadow: 0 8px 22px rgba(99,102,241,.2);
+  border-color: rgba(99,102,241,.3);
 }
 .sp-card--best {
-  border-color: rgba(16,185,129,.45);
-  background: rgba(16,185,129,.06);
-  box-shadow: 0 0 14px rgba(16,185,129,.1);
+  border-color: rgba(16,185,129,.55);
+  background: rgba(16,185,129,.12);
+  box-shadow: 0 0 16px rgba(16,185,129,.25);
 }
 
 .sp-img {
@@ -541,10 +541,10 @@ header {
   letter-spacing: .5px;
 }
 .sp-label { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 5px; white-space: nowrap; letter-spacing: .3px; }
-.label-exact      { background: rgba(139,92,246,.2);  color: #c4b5fd; border: 1px solid rgba(139,92,246,.3); }
-.label-same-brand { background: rgba(59,130,246,.2);  color: #93c5fd; border: 1px solid rgba(59,130,246,.3); }
-.label-similar    { background: rgba(251,191,36,.15); color: #fcd34d; border: 1px solid rgba(251,191,36,.3); }
-.label-other      { background: rgba(255,255,255,.07); color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.1); }
+.label-exact      { background: rgba(168,85,247,.25);  color: #e9d5ff; border: 1px solid rgba(168,85,247,.5); }
+.label-same-brand { background: rgba(34,197,220,.25);  color: #67e8f9; border: 1px solid rgba(34,197,220,.5); }
+.label-similar    { background: rgba(59,130,246,.25); color: #bfdbfe; border: 1px solid rgba(59,130,246,.5); }
+.label-other      { background: rgba(100,116,139,.2); color: rgba(241,245,249,.6); border: 1px solid rgba(148,163,184,.3); }
 
 .sp-best-badge {
   font-size: 8.5px;
@@ -573,27 +573,28 @@ header {
 .sp-price {
   font-size: 14px;
   font-weight: 800;
-  color: rgba(255,255,255,.9);
+  color: #f1f5f9;
   letter-spacing: -.2px;
 }
-.sp-price--best { color: #34d399; text-shadow: 0 0 10px rgba(52,211,153,.3); }
+.sp-price--best { color: #4ade80; text-shadow: 0 0 12px rgba(74,222,128,.4); font-weight: 900; }
 
 .sp-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 4px 11px;
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
   color: #fff;
   border-radius: 20px;
   font-size: 10px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: transform .2s, box-shadow .2s;
-  box-shadow: 0 2px 8px rgba(124,58,237,.35);
+  transition: transform .2s, box-shadow .2s, filter .2s;
+  box-shadow: 0 2px 8px rgba(139,92,246,.45);
+  border: 1px solid rgba(139,92,246,.3);
 }
-.sp-btn:hover { transform: scale(1.07); box-shadow: 0 4px 14px rgba(124,58,237,.55); }
+.sp-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(139,92,246,.6); filter: brightness(1.15); }
 
 /* ── Utility ─────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

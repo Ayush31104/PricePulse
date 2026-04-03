@@ -143,13 +143,25 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
             <p className="text-xs text-white/40 uppercase tracking-widest mb-1">{platform}</p>
             <h2 className="text-sm font-bold text-white/90 line-clamp-2 leading-snug">{title}</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 p-1.5 rounded-xl bg-white/08 hover:bg-white/15
-                       text-white/50 hover:text-white transition-colors"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href={productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-gradient flex items-center justify-center gap-2 px-4 py-2 rounded-xl
+                         text-white text-xs font-bold whitespace-nowrap hover:scale-105 transition-transform"
+            >
+              Buy
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+            </a>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-xl bg-white/08 hover:bg-white/15
+                         text-white/50 hover:text-white transition-colors"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="px-5 py-5 flex flex-col gap-5">
@@ -275,10 +287,11 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
               </p>
               <div className="flex flex-col gap-2">
                 {sorted.map((p, i) => {
-                  const pUrl    = p.productUrl || p.url || '#';
-                  const color   = PLATFORM_COLORS[p.platform] || '#6366f1';
-                  const isBest  = i === 0;
-                  const diffPct = isBest ? 0 : Math.round(((p.price - bestPrice) / bestPrice) * 100);
+                  const pUrl      = p.productUrl || p.url || '#';
+                  const color     = PLATFORM_COLORS[p.platform] || '#6366f1';
+                  const isBest    = i === 0;
+                  const isViewing = String(p._id || p.id || '') === productId;
+                  const diffPct   = isBest ? 0 : Math.round(((p.price - bestPrice) / bestPrice) * 100);
 
                   return (
                     <a
@@ -287,16 +300,25 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`flex items-center justify-between px-4 py-2.5 rounded-xl
-                                  border transition-all hover:scale-[1.01]
-                                  ${isBest
+                                  border-2 transition-all hover:scale-[1.01]
+                                  ${isViewing
+                                    ? 'border-indigo-400/80 bg-indigo-500/15 shadow-lg shadow-indigo-500/20'
+                                    : isBest
                                     ? 'border-green-400/30 bg-green-500/08'
                                     : 'border-white/08 bg-white/04'}`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ background: color }} />
-                        <span className="text-sm font-semibold text-white/80">{p.platform}</span>
-                        {isBest && (
+                        <span className={`text-sm font-semibold ${isViewing ? 'text-indigo-300' : 'text-white/80'}`}>
+                          {p.platform}
+                        </span>
+                        {isViewing && (
+                          <span className="text-xs bg-indigo-500 text-white px-2 py-0.5 rounded-full font-bold">
+                            Viewing
+                          </span>
+                        )}
+                        {isBest && !isViewing && (
                           <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">
                             Cheapest
                           </span>
@@ -304,14 +326,14 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          <span className={`text-sm font-black ${isBest ? 'text-green-400' : 'text-white'}`}>
+                          <span className={`text-sm font-black ${isViewing ? 'text-indigo-300' : isBest ? 'text-green-400' : 'text-white'}`}>
                             {formatCurrency(p.price)}
                           </span>
                           {!isBest && diffPct > 0 && (
                             <p className="text-xs text-red-400/70">+{diffPct}% higher</p>
                           )}
                         </div>
-                        <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 text-white/25 flex-shrink-0" />
+                        <ArrowTopRightOnSquareIcon className={`h-3.5 w-3.5 flex-shrink-0 ${isViewing ? 'text-indigo-300' : 'text-white/25'}`} />
                       </div>
                     </a>
                   );
