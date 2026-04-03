@@ -59,6 +59,7 @@ export default function ProductList({ products, sort, activePlatforms }) {
             key={key}
             product={product}
             isCheapest={isCheapest}
+            allProducts={processed}
           />
         );
       })}
