@@ -78,9 +78,8 @@ app.use('/api', generalLimiter);
 app.use('/api/auth',     authRoutes);
 app.use('/api/users',    userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/history',  historyRoutes);
-// Price history snapshots — used by the browser extension
 app.use('/api/products', priceHistoryRoutes);
+app.use('/api/history',  historyRoutes);
 
 // ── Download extension route ──────────────────────────────────────────────────
 app.get('/download-extension', (req, res) => {

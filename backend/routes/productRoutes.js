@@ -21,7 +21,8 @@ router.get('/search', searchLimiter, optionalAuth, validateSearch, searchProduct
 // POST /api/products/compare-link  — paste a URL, get cross-platform comparison
 router.post('/compare-link', searchLimiter, optionalAuth, validateCompareLink, compareLinkProducts);
 
-// GET /api/products/:id
-router.get('/:id', getProductById);
+// Explicitly guard /:id so it never matches named sub-paths like /price-history
+// GET /api/products/:id — only matches valid MongoDB ObjectIds (24 hex chars)
+router.get('/:id([a-fA-F0-9]{24})', getProductById);
 
 export default router;
