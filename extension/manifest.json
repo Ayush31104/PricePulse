@@ -41,7 +41,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["services/priceHistoryStorage.js", "services/priceTracker.js", "services/api.js"],
+      "resources": ["services/priceHistoryStorage.js", "services/priceTracker.js", "services/generatePriceHistory.js", "services/api.js"],
       "matches": ["<all_urls>"]
     }
   ],

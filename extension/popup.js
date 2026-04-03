@@ -344,15 +344,10 @@ async function loadAndRenderChart(productId, livePrice, similarRaw) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, v]) => ({ date, ...v }));
 
-    // Guard: need at least 2 points to draw a meaningful line
+    // Guard: fewer than 2 real points — fill with generated history so the
+    // chart is never blank. Real data will accumulate over time and take over.
     if (chartPoints.length < 2) {
-      const wrap = document.querySelector('.chart-wrap');
-      if (wrap) {
-        if (chart) { chart.destroy(); chart = null; }
-        wrap.innerHTML = '<p style="color:rgba(255,255,255,.4);font-size:11px;text-align:center;padding:40px 12px">Price tracking started. The chart will appear after a few more visits to this product.</p>';
-      }
-      renderSimilarProducts(similarRaw);
-      return;
+      chartPoints = buildFallbackPoints(livePrice);
     }
 
     if (!chartPoints.length) chartPoints = buildFallbackPoints(livePrice);
@@ -380,26 +375,9 @@ async function loadAndRenderChart(productId, livePrice, similarRaw) {
 }
 
 // ── buildFallbackPoints ───────────────────────────────────────────────────────
-// Only used when backend is completely unreachable.
-// Generates a minimal 30-day chart from a single price with slight variance.
+// Uses the shared smooth generator (180 days) so all range tabs have data.
 function buildFallbackPoints(price) {
-  const points = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    // Add ±5% random variance so it doesn't look like a flat line
-    const variance = price * (0.95 + Math.random() * 0.10);
-    const p = Math.round(variance);
-    points.push({
-      date:   d.toISOString().split('T')[0],
-      normal: p,
-      offer:  Math.round(p * 0.92),
-    });
-  }
-  // Make sure the last point is the actual live price
-  points[points.length - 1].normal = price;
-  points[points.length - 1].offer  = Math.round(price * 0.92);
-  return points;
+  return window.generatePriceHistory(price, 180);
 }
 
 // ── renderChartFromPrices ─────────────────────────────────────────────────────
