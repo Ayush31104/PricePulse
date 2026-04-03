@@ -1,5 +1,4 @@
 // extension/services/priceHistoryStorage.js
-// Loaded as a plain <script> tag — no ES module syntax.
 // Exposes window.priceHistoryStorage as a global for popup.js to use.
 
 class PriceHistoryStorage {
@@ -11,8 +10,8 @@ class PriceHistoryStorage {
   openDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
-      request.onerror        = () => reject(request.error);
-      request.onsuccess      = () => resolve(request.result);
+      request.onerror         = () => reject(request.error);
+      request.onsuccess       = () => resolve(request.result);
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains('products')) {
@@ -33,24 +32,24 @@ class PriceHistoryStorage {
       req.onerror   = () => resolve(undefined);
     });
 
-    const now      = Date.now();
-    const newEntry = { price, timestamp: now };
+    const now       = Date.now();
+    const todayDate = new Date(now).toISOString().split('T')[0];
 
     if (existing) {
-      const lastEntry   = existing.prices[existing.prices.length - 1];
-      const timeDiff    = now - lastEntry.timestamp;
-      const priceChanged = lastEntry.price !== price;
-      const intervalMs  = 6 * 60 * 60 * 1000; // record at most once per 6 hours unless price changed
+      const last         = existing.prices[existing.prices.length - 1];
+      const lastDate     = new Date(last.timestamp).toISOString().split('T')[0];
+      const priceChanged = last.price !== price;
+      const isNewDay     = lastDate !== todayDate;
 
-      if (priceChanged || timeDiff >= intervalMs) {
-        existing.prices.push(newEntry);
+      // Record if price changed or it's a new day
+      if (priceChanged || isNewDay) {
+        existing.prices.push({ price, timestamp: now });
         store.put(existing);
       }
     } else {
-      store.add({ productId, title, prices: [newEntry] });
+      store.add({ productId, title, prices: [{ price, timestamp: now }] });
     }
 
-    // Wait for transaction to complete before closing
     await new Promise((resolve, reject) => {
       transaction.oncomplete = resolve;
       transaction.onerror    = () => reject(transaction.error);
@@ -72,5 +71,4 @@ class PriceHistoryStorage {
   }
 }
 
-// Expose as a global so popup.js can access it without ES module imports
 window.priceHistoryStorage = new PriceHistoryStorage();

@@ -326,7 +326,7 @@ header {
 }
 
 .chart-wrap { position: relative; height: 140px; }
-.chart-wrap canvas { width: 100% !important; height: 100% !important; }
+.chart-wrap canvas { display: block; }
 
 /* ── Stats Grid ──────────────────────────────────────────────────────────── */
 .stats-grid {
