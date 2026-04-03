@@ -1,16 +1,6 @@
-// ============================================================
-// components/ProductCard.jsx — Single product result card
-// ============================================================
-// Displays one product listing with its image, title, rating,
-// price, and a "View Deal" button that links to the product page.
-//
-// Props:
-//   product     — product object from the backend
-//   isCheapest  — boolean, true if this is the lowest-priced result
-//                 (passed down from ProductList after client-side recalculation)
-
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatCurrency';
-import { StarIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/solid';
+import { StarIcon, ArrowTopRightOnSquareIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
 import WishlistButton from './WishlistButton';
 
@@ -33,24 +23,27 @@ function StarRating({ rating }) {
   );
 }
 
-export default function ProductCard({ product, isCheapest: isCheapestProp }) {
-  const style = PLATFORM_STYLES[product.platform] || PLATFORM_STYLES.Amazon;
+export default function ProductCard({ product, isCheapest: isCheapestProp, allProducts = [] }) {
+  const navigate   = useNavigate();
+  const style      = PLATFORM_STYLES[product.platform] || PLATFORM_STYLES.Amazon;
 
   const title      = product.name       || product.title || 'Unknown Product';
   const productUrl = product.productUrl || product.url   || '#';
   const reviews    = product.reviews    || 0;
   const isCheapest = product.isCheapest || isCheapestProp;
 
-  return (
-    <a
-      href={productUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`product-card relative flex flex-col rounded-2xl overflow-hidden cursor-pointer
-                   no-underline text-inherit block
-                   ${isCheapest ? 'ring-2 ring-green-400/60 shadow-green-500/20' : ''}`}
-    >
+  function handlePriceHistory(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate('/price-history', { state: { product, allProducts } });
+  }
 
+  return (
+    <div
+      className={`product-card relative flex flex-col rounded-2xl overflow-hidden cursor-pointer
+                  ${isCheapest ? 'ring-2 ring-green-400/60 shadow-green-500/20' : ''}`}
+      onClick={() => window.open(productUrl, '_blank')}
+    >
       {/* Best Price ribbon */}
       {isCheapest && (
         <div className="absolute top-3 left-3 z-10 bg-green-500 text-white text-xs font-bold
@@ -66,7 +59,7 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
         {product.platform}
       </div>
 
-      {/* Wishlist heart button — below ribbon when cheapest, else top-left */}
+      {/* Wishlist */}
       <div className={`absolute left-3 z-20 ${isCheapest ? 'top-12' : 'top-3'}`}>
         <WishlistButton product={product} />
       </div>
@@ -97,8 +90,7 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
 
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/10">
           <div>
-            <span className={`text-2xl font-black tracking-tight
-                              ${isCheapest ? 'text-green-400' : 'text-white'}`}>
+            <span className={`text-2xl font-black tracking-tight ${isCheapest ? 'text-green-400' : 'text-white'}`}>
               {formatCurrency(product.price)}
             </span>
             {isCheapest && (
@@ -106,22 +98,36 @@ export default function ProductCard({ product, isCheapest: isCheapestProp }) {
             )}
           </div>
 
-          <a
-            href={productUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className={`view-deal-btn flex items-center gap-1.5 text-xs font-semibold
-                        px-4 py-2 rounded-xl text-white
-                        ${isCheapest
-                          ? 'bg-green-500 hover:bg-green-400 shadow-lg shadow-green-500/30'
-                          : 'btn-gradient'}`}
-          >
-            View Deal
-            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-          </a>
+          <div className="flex flex-col gap-1.5 items-end">
+            {/* View Deal */}
+            <a
+              href={productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`view-deal-btn flex items-center gap-1.5 text-xs font-semibold
+                          px-4 py-2 rounded-xl text-white
+                          ${isCheapest
+                            ? 'bg-green-500 hover:bg-green-400 shadow-lg shadow-green-500/30'
+                            : 'btn-gradient'}`}
+            >
+              View Deal
+              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+            </a>
+
+            {/* Price History */}
+            <button
+              onClick={handlePriceHistory}
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl
+                         text-indigo-300 border border-indigo-400/30 bg-indigo-500/10
+                         hover:bg-indigo-500/20 transition-colors w-full justify-center"
+            >
+              <ChartBarIcon className="h-3.5 w-3.5" />
+              Price History
+            </button>
+          </div>
         </div>
       </div>
-    </a>
+    </div>
   );
 }

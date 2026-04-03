@@ -23,6 +23,7 @@ import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
 import ProductDetail from './pages/ProductDetail';
 import WishlistPage from './pages/WishlistPage';
+import PriceHistoryPage from './pages/PriceHistoryPage';
 
 export default function App() {
   return (
@@ -36,9 +37,10 @@ export default function App() {
             <Route path="/register"    element={<Register />} />
             <Route path="/dashboard"   element={<Dashboard />} />
             <Route path="/profile"     element={<Profile />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/wishlist"    element={<WishlistPage />} />
-            <Route path="*"            element={<Home />} />
+            <Route path="/product/:id"      element={<ProductDetail />} />
+            <Route path="/wishlist"          element={<WishlistPage />} />
+            <Route path="/price-history"     element={<PriceHistoryPage />} />
+            <Route path="*"                  element={<Home />} />
           </Routes>
         </BrowserRouter>
       </WishlistProvider>
