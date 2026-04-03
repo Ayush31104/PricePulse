@@ -5,13 +5,14 @@ import { sendSuccess } from '../utils/ApiResponse.js';
 import { badRequest } from '../utils/ApiError.js';
 
 /**
- * GET /api/products/price-history?productId=<id>
- * Returns the full snapshot array formatted for Chart.js.
+ * GET /api/products/price-history?productId=<id>&days=<n>
+ * Returns snapshots filtered to the requested window.
+ * days=0 or omitted → return all snapshots (Max / all-time).
  * Response: { data: [{ date, price }], stats: { min, max, avg, current } }
  */
 export const getPriceHistory = async (req, res, next) => {
   try {
-    const { productId } = req.query;
+    const { productId, days } = req.query;
     if (!productId) return next(badRequest('productId query param is required'));
 
     const record = await PriceHistory.findOne({ productId }).lean();
@@ -20,12 +21,21 @@ export const getPriceHistory = async (req, res, next) => {
       return sendSuccess(res, { data: [], stats: null }, 'No price history available');
     }
 
-    const data = record.snapshots.map((s) => ({
+    // Filter snapshots to the requested time window
+    const numDays = parseInt(days, 10);
+    const cutoff  = numDays > 0
+      ? new Date(Date.now() - numDays * 24 * 60 * 60 * 1000)
+      : new Date(0); // epoch = all-time
+
+    const filtered = record.snapshots.filter((s) => new Date(s.recordedAt) >= cutoff);
+    const source   = filtered.length >= 2 ? filtered : record.snapshots;
+
+    const data = source.map((s) => ({
       date:  new Date(s.recordedAt).toISOString().split('T')[0],
       price: s.price,
     }));
 
-    const prices  = record.snapshots.map((s) => s.price);
+    const prices  = source.map((s) => s.price);
     const min     = Math.min(...prices);
     const max     = Math.max(...prices);
     const avg     = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
@@ -60,9 +70,8 @@ export const recordPriceSnapshot = async (req, res, next) => {
     const record = await PriceHistory.findOne({ productId });
 
     if (!record) {
-      // ── First time this product is seen — seed 90 days of history ──────────
-      const snapshots = generateSeedHistory(numPrice, 90);
-      // Add today's real snapshot at the end
+      // ── First time this product is seen — seed 365 days of history ─────────
+      const snapshots = generateSeedHistory(numPrice, 365);
       snapshots.push({ price: numPrice, recordedAt: now });
 
       await PriceHistory.create({ productId, title, snapshots });
@@ -98,22 +107,18 @@ export const recordPriceSnapshot = async (req, res, next) => {
  * sorted oldest → newest, NOT including today (caller adds today's real price).
  */
 function generateSeedHistory(currentPrice, days) {
-  const snapshots = [];
-  const volatility = 0.012;      // ~1.2% daily random move
-  const meanReversion = 0.08;    // pull back toward current price
-  const seedDays = days - 1;     // leave today for the real snapshot
+  const snapshots     = [];
+  const volatility    = 0.012;
+  const meanReversion = 0.08;
+  const seedDays      = days - 1;
 
-  // Walk backwards: start from current price and simulate backwards in time
-  // Then reverse so the array is oldest → newest
   let price = currentPrice;
   const rawPrices = [price];
 
   for (let i = 0; i < seedDays; i++) {
-    const drift    = meanReversion * (currentPrice - price) / currentPrice;
-    const shock    = (Math.random() - 0.5) * 2 * volatility;
-    const change   = drift + shock;
-    price = Math.round(price * (1 - change)); // walk backwards
-    // Clamp to ±25% of current price so history looks realistic
+    const drift  = meanReversion * (currentPrice - price) / currentPrice;
+    const shock  = (Math.random() - 0.5) * 2 * volatility;
+    price = Math.round(price * (1 - (drift + shock)));
     price = Math.max(
       Math.round(currentPrice * 0.75),
       Math.min(Math.round(currentPrice * 1.25), price)
@@ -121,13 +126,10 @@ function generateSeedHistory(currentPrice, days) {
     rawPrices.push(price);
   }
 
-  // rawPrices[0] = today, rawPrices[N] = 90 days ago — reverse it
   rawPrices.reverse();
 
-  // Assign one snapshot per day, starting from `days` ago
   for (let i = 0; i < rawPrices.length; i++) {
     const d = new Date(Date.now() - (seedDays - i) * 24 * 60 * 60 * 1000);
-    // Snap to midnight UTC so dates are clean
     d.setUTCHours(0, 0, 0, 0);
     snapshots.push({ price: rawPrices[i], recordedAt: d });
   }

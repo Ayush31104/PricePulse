@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/solid';
 import { Chart, registerables } from 'chart.js';
 import { formatCurrency } from '../utils/formatCurrency';
+import { generatePriceHistory } from '../utils/generatePriceHistory';
 import api from '../services/api';
 
 Chart.register(...registerables);
@@ -28,25 +29,13 @@ const PLATFORM_COLORS = {
   Snapdeal: { hex: '#ef4444', bg: 'bg-red-500/10',    border: 'border-red-400/30',    text: 'text-red-300'    },
 };
 
-// Seed realistic mock history when backend has no data yet
-function generateMockHistory(currentPrice) {
-  const points = [];
-  const now    = Date.now();
-  const days   = 180;
-  let   price  = currentPrice * 1.15; // start 15% higher
-
-  for (let i = days; i >= 0; i--) {
-    // Random walk ±2%
-    price = price * (1 + (Math.random() - 0.52) * 0.04);
-    price = Math.max(currentPrice * 0.8, Math.min(currentPrice * 1.3, price));
-    points.push({
-      price: Math.round(price),
-      date:  now - i * 24 * 60 * 60 * 1000,
-    });
-  }
-  // Last point is always current price
-  points[points.length - 1].price = currentPrice;
-  return points;
+// Convert generatePriceHistory output (date strings) to internal format (timestamps)
+function mockHistory(currentPrice) {
+  return generatePriceHistory(currentPrice, 365).map((p) => ({
+    price:      p.price,
+    offerPrice: p.offerPrice,
+    date:       new Date(p.date).getTime(),
+  }));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -85,18 +74,27 @@ export default function PriceHistoryPage() {
     if (!product) return;
     setLoading(true);
 
-    api.get(`/products/price-history?productId=${encodeURIComponent(productId)}`)
+    // Pass days=0 for Max (all-time), otherwise pass the selected window.
+    // Backend uses this to return the right slice; if it ignores the param
+    // we still filter client-side in the chart effect below.
+    const daysParam = activeRange === 0 ? 365 : activeRange;
+
+    api.get(`/products/price-history?productId=${encodeURIComponent(productId)}&days=${daysParam}`)
       .then((res) => {
-        const raw    = res.data?.data ?? [];
-        const points = raw.map((s) => ({
-          price: s.price,
-          date:  new Date(s.date).getTime(),
-        }));
-        setHistory(points.length >= 2 ? points : generateMockHistory(currentPrice));
+        const raw = res.data?.data ?? [];
+        if (raw.length >= 2) {
+          setHistory(raw.map((s) => ({
+            price:      s.price,
+            offerPrice: s.offerPrice ?? Math.round(s.price * 0.95),
+            date:       new Date(s.date).getTime(),
+          })));
+        } else {
+          setHistory(mockHistory(currentPrice));
+        }
       })
-      .catch(() => setHistory(generateMockHistory(currentPrice)))
+      .catch(() => setHistory(mockHistory(currentPrice)))
       .finally(() => setLoading(false));
-  }, [productId]);
+  }, [productId, activeRange]);
 
   // ── Build chart ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -112,12 +110,13 @@ export default function PriceHistoryPage() {
 
     if (points.length === 0) return;
 
-    const labels = points.map((p) =>
+    const labels      = points.map((p) =>
       new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
     );
-    const prices = points.map((p) => p.price);
-    const minP   = Math.min(...prices);
-    const alert  = alertSet && alertPrice ? Number(alertPrice) : null;
+    const prices      = points.map((p) => p.price);
+    const offerPrices = points.map((p) => p.offerPrice ?? Math.round(p.price * 0.95));
+    const minP        = Math.min(...prices);
+    const alert       = alertSet && alertPrice ? Number(alertPrice) : null;
 
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
 
@@ -126,31 +125,45 @@ export default function PriceHistoryPage() {
     gradient.addColorStop(0, 'rgba(99,102,241,0.4)');
     gradient.addColorStop(1, 'rgba(99,102,241,0)');
 
-    const datasets = [{
-      label:                'Price',
-      data:                 prices,
-      borderColor:          '#6366f1',
-      backgroundColor:      gradient,
-      borderWidth:          2.5,
-      tension:              0.4,
-      fill:                 true,
-      pointRadius:          prices.map((p) => p === minP ? 8 : 3),
-      pointBackgroundColor: prices.map((p) => p === minP ? '#4ade80' : '#6366f1'),
-      pointBorderColor:     prices.map((p) => p === minP ? '#fff' : 'transparent'),
-      pointBorderWidth:     prices.map((p) => p === minP ? 2 : 0),
-    }];
+    const datasets = [
+      {
+        label:                'Normal Price',
+        data:                 prices,
+        borderColor:          '#6366f1',
+        backgroundColor:      gradient,
+        borderWidth:          2.5,
+        tension:              0.4,
+        fill:                 true,
+        pointRadius:          prices.map((p) => p === minP ? 7 : 0),
+        pointBackgroundColor: prices.map((p) => p === minP ? '#4ade80' : '#6366f1'),
+        pointBorderColor:     prices.map((p) => p === minP ? '#fff' : 'transparent'),
+        pointBorderWidth:     prices.map((p) => p === minP ? 2 : 0),
+        pointHoverRadius:     4,
+      },
+      {
+        label:            'With Offers',
+        data:             offerPrices,
+        borderColor:      '#f59e0b',
+        backgroundColor:  'transparent',
+        borderWidth:      1.5,
+        borderDash:       [5, 4],
+        tension:          0.4,
+        fill:             false,
+        pointRadius:      0,
+        pointHoverRadius: 4,
+      },
+    ];
 
-    // Alert line annotation
     if (alert) {
       datasets.push({
-        label:           'Your Alert',
-        data:            prices.map(() => alert),
-        borderColor:     '#f59e0b',
-        borderWidth:     1.5,
-        borderDash:      [6, 4],
-        pointRadius:     0,
-        fill:            false,
-        tension:         0,
+        label:       'Your Alert',
+        data:        prices.map(() => alert),
+        borderColor: '#ef4444',
+        borderWidth: 1.5,
+        borderDash:  [6, 4],
+        pointRadius: 0,
+        fill:        false,
+        tension:     0,
       });
     }
 
@@ -164,8 +177,8 @@ export default function PriceHistoryPage() {
         interaction:         { mode: 'index', intersect: false },
         plugins: {
           legend: {
-            display: !!alert,
-            labels:  { color: 'rgba(255,255,255,0.5)', font: { size: 11 } },
+            display: true,
+            labels:  { color: 'rgba(255,255,255,0.45)', font: { size: 11 }, boxWidth: 24, padding: 16 },
           },
           tooltip: {
             backgroundColor: 'rgba(10,8,30,0.95)',
@@ -507,18 +520,22 @@ export default function PriceHistoryPage() {
           )}
 
           {/* Chart legend */}
-          <div className="flex items-center gap-4 mt-4 flex-wrap">
+          <div className="flex items-center gap-5 mt-4 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-indigo-400" />
+              <span className="text-xs text-white/35">Normal price</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-amber-400" />
+              <span className="text-xs text-white/35">With offers</span>
+            </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-full bg-green-400" />
               <span className="text-xs text-white/35">Lowest price</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-indigo-400" />
-              <span className="text-xs text-white/35">Price trend</span>
-            </div>
             {alertSet && (
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-amber-400 border-dashed" />
+                <span className="w-3 h-0.5 bg-red-400" />
                 <span className="text-xs text-white/35">Your alert ({formatCurrency(Number(alertPrice))})</span>
               </div>
             )}

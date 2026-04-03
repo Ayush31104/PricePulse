@@ -5,31 +5,13 @@ import {
 } from 'recharts';
 import { XMarkIcon, ArrowTopRightOnSquareIcon, BellIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
 import { formatCurrency } from '../utils/formatCurrency';
-
-// ── Generate mock price history when no real data exists ──────────────────────
-function generateMockHistory(currentPrice) {
-  const points = [];
-  const now    = Date.now();
-  let   price  = currentPrice * 1.12;
-
-  for (let i = 89; i >= 0; i--) {
-    price = price * (1 + (Math.random() - 0.51) * 0.035);
-    price = Math.max(currentPrice * 0.82, Math.min(currentPrice * 1.25, price));
-    points.push({
-      price: Math.round(price),
-      date:  new Date(now - i * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-      ts:    now - i * 24 * 60 * 60 * 1000,
-    });
-  }
-  points[points.length - 1].price = currentPrice;
-  return points;
-}
+import { generatePriceHistory } from '../utils/generatePriceHistory';
 
 const RANGES = [
-  { label: '1M', days: 30  },
-  { label: '3M', days: 90  },
-  { label: '6M', days: 180 },
-  { label: 'Max', days: 0  },
+  { label: '1M',  days: 30  },
+  { label: '3M',  days: 90  },
+  { label: '6M',  days: 180 },
+  { label: 'Max', days: 0   },
 ];
 
 const PLATFORM_COLORS = {
@@ -40,13 +22,17 @@ const PLATFORM_COLORS = {
   Snapdeal: '#ef4444',
 };
 
-// ── Custom tooltip for recharts ───────────────────────────────────────────────
+// ── Custom tooltip ────────────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#0f0c29] border border-indigo-500/30 rounded-xl px-3 py-2 text-xs shadow-xl">
-      <p className="text-white/50 mb-0.5">{label}</p>
-      <p className="text-white font-black">{formatCurrency(payload[0].value)}</p>
+      <p className="text-white/50 mb-1">{label}</p>
+      {payload.map((entry) => (
+        <p key={entry.name} style={{ color: entry.color }} className="font-black">
+          {entry.name}: {formatCurrency(entry.value)}
+        </p>
+      ))}
     </div>
   );
 }
@@ -66,9 +52,15 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
   const platform     = product.platform || '';
   const productId    = String(product._id || product.id || '');
 
-  // Load mock history (replace with real API call if available)
+  // Load history using shared generator (365 days covers all range tabs)
   useEffect(() => {
-    setHistory(generateMockHistory(currentPrice));
+    const raw = generatePriceHistory(currentPrice, 365);
+    setHistory(raw.map((p) => ({
+      price:      p.price,
+      offerPrice: p.offerPrice,
+      date:       new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      ts:         new Date(p.date).getTime(),
+    })));
   }, [currentPrice]);
 
   // Load saved alert
@@ -77,22 +69,22 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
     if (saved) { setAlertPrice(saved); setAlertSet(true); }
   }, [productId]);
 
-  // Close on Escape key
+  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Prevent body scroll while modal is open
+  // Prevent body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // ── Filter history by range ─────────────────────────────────────────────────
-  const cutoff       = range === 0 ? 0 : Date.now() - range * 24 * 60 * 60 * 1000;
-  const chartData    = history.filter((p) => p.ts >= cutoff);
+  // ── Filter by range ─────────────────────────────────────────────────────────
+  const cutoff    = range === 0 ? 0 : Date.now() - range * 24 * 60 * 60 * 1000;
+  const chartData = history.filter((p) => p.ts >= cutoff);
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   const allPrices = history.map((p) => p.price);
@@ -104,14 +96,14 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
 
   // ── Buy recommendation ──────────────────────────────────────────────────────
   const badge = currentPrice <= minPrice
-    ? { text: '🟢 Great time to buy!',       cls: 'bg-green-500/15 border-green-400/30 text-green-400'  }
+    ? { text: '🟢 Great time to buy!',       cls: 'bg-green-500/15 border-green-400/30 text-green-400'   }
     : currentPrice >= avgPrice
-    ? { text: '🔴 Wait for a better deal',    cls: 'bg-red-500/15   border-red-400/30   text-red-400'    }
+    ? { text: '🔴 Wait for a better deal',    cls: 'bg-red-500/15   border-red-400/30   text-red-400'     }
     : { text: '🟡 Average price — your call', cls: 'bg-yellow-500/15 border-yellow-400/30 text-yellow-300' };
 
   // ── Platform comparison ─────────────────────────────────────────────────────
-  const sorted     = [...allProducts].sort((a, b) => a.price - b.price);
-  const bestPrice  = sorted[0]?.price || currentPrice;
+  const sorted    = [...allProducts].sort((a, b) => a.price - b.price);
+  const bestPrice = sorted[0]?.price || currentPrice;
 
   // ── Alert handlers ──────────────────────────────────────────────────────────
   function handleSetAlert() {
@@ -128,7 +120,6 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
     setAlertPrice('');
   }
 
-  // ── Click outside to close ──────────────────────────────────────────────────
   function handleOverlayClick(e) {
     if (e.target === overlayRef.current) onClose();
   }
@@ -140,7 +131,6 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center
                  bg-black/70 backdrop-blur-sm px-0 sm:px-4"
     >
-      {/* Modal panel — bottom drawer on mobile, centered on desktop */}
       <div className="relative w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[88vh]
                       overflow-y-auto rounded-t-3xl sm:rounded-2xl
                       bg-[#0f0c29] border border-white/10
@@ -180,13 +170,12 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
           {/* ── Price stats ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: '↑ Highest', value: maxPrice, cls: 'text-red-400'    },
-              { label: '↓ Lowest',  value: minPrice, cls: 'text-green-400'  },
-              { label: '↕ Average', value: avgPrice, cls: 'text-indigo-300' },
-              { label: '● Current', value: currentPrice, cls: 'text-white'  },
+              { label: '↑ Highest', value: maxPrice,     cls: 'text-red-400'    },
+              { label: '↓ Lowest',  value: minPrice,     cls: 'text-green-400'  },
+              { label: '↕ Average', value: avgPrice,     cls: 'text-indigo-300' },
+              { label: '● Current', value: currentPrice, cls: 'text-white'      },
             ].map(({ label, value, cls }) => (
-              <div key={label}
-                   className="glass rounded-xl p-3 flex flex-col gap-1">
+              <div key={label} className="glass rounded-xl p-3 flex flex-col gap-1">
                 <p className="text-xs text-white/35">{label}</p>
                 <p className={`text-base font-black ${cls}`}>{formatCurrency(value)}</p>
               </div>
@@ -243,14 +232,38 @@ export default function PriceDetailsModal({ product, allProducts = [], onClose }
                   <Area
                     type="monotone"
                     dataKey="price"
+                    name="Normal Price"
                     stroke="#6366f1"
                     strokeWidth={2.5}
                     fill="url(#priceGrad)"
                     dot={false}
                     activeDot={{ r: 5, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
                   />
+                  <Area
+                    type="monotone"
+                    dataKey="offerPrice"
+                    name="With Offers"
+                    stroke="#f59e0b"
+                    strokeWidth={1.5}
+                    strokeDasharray="5 4"
+                    fill="none"
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-5 mt-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-indigo-400 inline-block" />
+                <span className="text-xs text-white/35">Normal price</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-amber-400 inline-block" />
+                <span className="text-xs text-white/35">With offers</span>
+              </div>
             </div>
           </div>
 
